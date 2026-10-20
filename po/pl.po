@@ -7211,3 +7211,27 @@ msgstr ""
 #~ "outline around the text"
 #~ msgstr ""
 #~ "Gdy zaznaczone, wyświetla prostokątne tło zamiast obramowania tekstu"
+
+msgid "Show &later"
+msgstr "&Później"
+
+msgid "Shift backward and keep this window open"
+msgstr "Przesuń do tyłu (okno pozostaje otwarte)"
+
+msgid "Shift forward and keep this window open"
+msgstr "Przesuń do przodu (okno pozostaje otwarte)"
+
+msgid "As &Dialogue"
+msgstr "Jako &dialog"
+
+msgid "As Dialogue"
+msgstr "Jako dialog"
+
+msgid "Join selected lines in a single one as dialogue, each line prefixed with a dash"
+msgstr "Połącz zaznaczone linie w jedną jako dialog, każda kwestia poprzedzona myślnikiem"
+
+msgid "join as dialogue"
+msgstr "połącz jako dialog"
+
+msgid "Join (as &dialogue)"
+msgstr "Połącz (jako &dialog)"

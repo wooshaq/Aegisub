@@ -71,6 +71,7 @@ class DialogShiftTimes final : public wxDialog {
 	void SaveHistory(json::Array shifted_blocks);
 	void LoadHistory();
 	void Process(wxCommandEvent&);
+	void ProcessDir(bool backward);
 	int Shift(int initial_time, int shift, bool by_time, agi::vfr::Time type);
 
 	void OnClear(wxCommandEvent&);
@@ -224,11 +225,28 @@ DialogShiftTimes::DialogShiftTimes(agi::Context *context)
 
 	wxSizer *main_sizer = new wxBoxSizer(wxVERTICAL);
 	main_sizer->Add(top_sizer, wxSizerFlags().Border(wxALL & ~wxBOTTOM));
-	main_sizer->Add(CreateButtonSizer(wxOK | wxCANCEL | wxHELP), wxSizerFlags().Right().Border());
+	// Subtitle Edit style: apply immediately, dialog stays open
+	shift_forward->Hide();
+	shift_backward->Hide();
+	wxButton *earlier_button = new wxButton(this, -1, _("Show &earlier"));
+	earlier_button->SetToolTip(_("Shift backward and keep this window open"));
+	earlier_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ProcessDir(true); });
+	wxButton *later_button = new wxButton(this, -1, _("Show &later"));
+	later_button->SetToolTip(_("Shift forward and keep this window open"));
+	later_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ProcessDir(false); });
+	wxButton *close_button = new wxButton(this, wxID_CANCEL, _("Close"));
+	wxButton *help_button = new wxButton(this, wxID_HELP);
+	wxSizer *button_sizer = new wxBoxSizer(wxHORIZONTAL);
+	button_sizer->Add(earlier_button, wxSizerFlags().Border(wxRIGHT));
+	button_sizer->Add(later_button, wxSizerFlags());
+	button_sizer->AddStretchSpacer(1);
+	button_sizer->Add(close_button, wxSizerFlags().Border(wxRIGHT));
+	button_sizer->Add(help_button, wxSizerFlags());
+	main_sizer->Add(button_sizer, wxSizerFlags().Expand().Border());
+	later_button->SetDefault();
 	SetSizerAndFit(main_sizer);
 	CenterOnParent();
 
-	Bind(wxEVT_BUTTON, &DialogShiftTimes::Process, this, wxID_OK);
 	Bind(wxEVT_BUTTON, std::bind(&HelpButton::OpenPage, "Shift Times"), wxID_HELP);
 	shift_time->Bind(wxEVT_TEXT_ENTER, &DialogShiftTimes::Process, this);
 	history_box->Bind(wxEVT_LISTBOX_DCLICK, &DialogShiftTimes::OnHistoryClick, this);
@@ -376,10 +394,8 @@ void DialogShiftTimes::Process(wxCommandEvent &) {
 	long shift;
 	if (by_time) {
 		shift = shift_time->GetTime();
-		if (shift == 0) {
-			Close();
+		if (shift == 0)
 			return;
-		}
 	}
 	else
 		shift_frames->GetValue().ToLong(&shift);
@@ -422,7 +438,14 @@ void DialogShiftTimes::Process(wxCommandEvent &) {
 	}
 
 	SaveHistory(std::move(shifted_blocks));
-	Close();
+	LoadHistory();
+}
+
+void DialogShiftTimes::ProcessDir(bool backward) {
+	shift_backward->SetValue(backward);
+	shift_forward->SetValue(!backward);
+	wxCommandEvent evt;
+	Process(evt);
 }
 
 int DialogShiftTimes::Shift(int initial_time, int shift, bool by_time, agi::vfr::Time type) {

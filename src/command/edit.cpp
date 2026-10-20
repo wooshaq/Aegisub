@@ -783,6 +783,18 @@ static void combine_concat(AssDialogue *first, AssDialogue *second) {
 
 static void combine_drop(AssDialogue *, AssDialogue *) { }
 
+static std::string dialogue_dash(std::string const& text) {
+	if (!text.empty() && text[0] == '-') return text;
+	return "- " + text;
+}
+
+static void combine_dialogue(AssDialogue *first, AssDialogue *second) {
+	if (second)
+		first->Text = agi::Str(first->Text.get(), "\\N", dialogue_dash(second->Text.get()));
+	else
+		first->Text = dialogue_dash(first->Text.get());
+}
+
 struct edit_line_join_as_karaoke final : public validate_sel_multiple {
 	CMD_NAME("edit/line/join/as_karaoke")
 	STR_MENU("As &Karaoke")
@@ -802,6 +814,17 @@ struct edit_line_join_concatenate final : public validate_sel_multiple {
 
 	void operator()(agi::Context *c) override {
 		combine_lines(c, combine_concat, _("join lines"));
+	}
+};
+
+struct edit_line_join_as_dialogue final : public validate_sel_multiple {
+	CMD_NAME("edit/line/join/as_dialogue")
+	STR_MENU("As &Dialogue")
+	STR_DISP("As Dialogue")
+	STR_HELP("Join selected lines in a single one as dialogue, each line prefixed with a dash")
+
+	void operator()(agi::Context *c) override {
+		combine_lines(c, combine_dialogue, _("join as dialogue"));
 	}
 };
 
@@ -1284,6 +1307,7 @@ namespace cmd {
 		reg(std::make_unique<edit_line_duplicate_shift_back>());
 		reg(std::make_unique<edit_line_join_as_karaoke>());
 		reg(std::make_unique<edit_line_join_concatenate>());
+		reg(std::make_unique<edit_line_join_as_dialogue>());
 		reg(std::make_unique<edit_line_join_keep_first>());
 		reg(std::make_unique<edit_line_paste>());
 		reg(std::make_unique<edit_line_paste_over>());
