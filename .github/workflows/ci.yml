@@ -133,6 +133,10 @@ jobs:
         with:
           fetch-depth: '0'
 
+      # Fork has no release tags; version scripts need them (RESOURCE_BASE_VERSION)
+      - name: Fetch upstream tags
+        run: git fetch --no-tags https://github.com/TypesettingTools/Aegisub.git "+refs/tags/*:refs/tags/*"
+
       - uses: actions/setup-python@v7
         with:
           python-version: '3.x'
