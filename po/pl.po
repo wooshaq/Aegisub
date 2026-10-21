@@ -7212,6 +7212,9 @@ msgstr ""
 #~ msgstr ""
 #~ "Gdy zaznaczone, wyświetla prostokątne tło zamiast obramowania tekstu"
 
+msgid "Show &earlier"
+msgstr "&Wcześniej"
+
 msgid "Show &later"
 msgstr "&Później"
 
