@@ -56,6 +56,7 @@
 #include <libaegisub/string.h>
 
 #include <algorithm>
+#include <regex>
 #include <boost/algorithm/string.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/adaptor/filtered.hpp>
@@ -457,6 +458,66 @@ struct edit_style_italic final : public Command {
 	}
 };
 
+struct edit_line_italic final : public validate_sel_nonempty {
+	CMD_NAME("edit/line/italic")
+	CMD_ICON(button_italics)
+	STR_MENU("Toggle Italics (whole line)")
+	STR_DISP("Toggle Italics (whole line)")
+	STR_HELP("Toggle italics for the selected text, or for the whole selected lines when no text is selected")
+
+	void operator()(agi::Context *c) override {
+		if (c->textSelectionController->GetSelectionStart() != c->textSelectionController->GetSelectionEnd()) {
+			toggle_override_tag(c, &AssStyle::italic, "\\i", _("toggle italic"));
+			return;
+		}
+
+		static const std::regex i_tag(R"(\\i[01]?(?![0-9a-zA-Z]))");
+		static const std::regex first_i(R"(\\i([01])(?![0-9a-zA-Z]))");
+
+		auto is_italic = [&](AssDialogue *line) {
+			AssStyle const* style = c->ass->GetStyle(line->Style);
+			bool state = style ? style->italic : false;
+			std::string const& text = line->Text.get();
+			if (!text.empty() && text[0] == '{') {
+				auto end = text.find('}');
+				if (end != std::string::npos) {
+					std::string block = text.substr(0, end);
+					for (std::sregex_iterator it(block.begin(), block.end(), first_i), e; it != e; ++it)
+						state = (*it)[1] == "1";
+				}
+			}
+			return state;
+		};
+
+		auto active = c->selectionController->GetActiveLine();
+		auto sel = c->selectionController->GetSortedSelection();
+		if (sel.empty()) return;
+		bool make_italic = !is_italic(active ? active : sel[0]);
+
+		for (AssDialogue *line : sel) {
+			AssStyle const* style = c->ass->GetStyle(line->Style);
+			bool style_italic = style ? style->italic : false;
+
+			std::string text = std::regex_replace(line->Text.get(), i_tag, "");
+			// drop override blocks left empty
+			size_t pos;
+			while ((pos = text.find("{}")) != std::string::npos)
+				text.erase(pos, 2);
+
+			if (make_italic != style_italic) {
+				std::string tag = make_italic ? "\\i1" : "\\i0";
+				if (!text.empty() && text[0] == '{')
+					text.insert(1, tag);
+				else
+					text = "{" + tag + "}" + text;
+			}
+			line->Text = text;
+		}
+
+		c->ass->Commit(_("toggle italic"), AssFile::COMMIT_DIAG_TEXT);
+	}
+};
+
 struct edit_style_underline final : public Command {
 	CMD_NAME("edit/style/underline")
 	CMD_ICON(button_underline)
@@ -819,6 +880,7 @@ struct edit_line_join_concatenate final : public validate_sel_multiple {
 
 struct edit_line_join_as_dialogue final : public validate_sel_multiple {
 	CMD_NAME("edit/line/join/as_dialogue")
+	CMD_ICON(join_dialogue_button)
 	STR_MENU("As &Dialogue")
 	STR_DISP("As Dialogue")
 	STR_HELP("Join selected lines in a single one as dialogue, each line prefixed with a dash")
@@ -1308,6 +1370,7 @@ namespace cmd {
 		reg(std::make_unique<edit_line_join_as_karaoke>());
 		reg(std::make_unique<edit_line_join_concatenate>());
 		reg(std::make_unique<edit_line_join_as_dialogue>());
+		reg(std::make_unique<edit_line_italic>());
 		reg(std::make_unique<edit_line_join_keep_first>());
 		reg(std::make_unique<edit_line_paste>());
 		reg(std::make_unique<edit_line_paste_over>());

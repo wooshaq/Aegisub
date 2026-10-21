@@ -7238,3 +7238,9 @@ msgstr "połącz jako dialog"
 
 msgid "Join (as &dialogue)"
 msgstr "Połącz (jako &dialog)"
+
+msgid "Toggle Italics (whole line)"
+msgstr "Przełącz kursywę (cała linia)"
+
+msgid "Toggle italics for the selected text, or for the whole selected lines when no text is selected"
+msgstr "Przełącza kursywę zaznaczonego tekstu, a gdy nic nie jest zaznaczone – całych zaznaczonych linii"

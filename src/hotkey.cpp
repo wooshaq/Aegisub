@@ -47,6 +47,13 @@ namespace {
 		{nullptr}
 	};
 
+	const char *added_hotkeys_wsq[][3] = {
+		{"edit/line/italic", "Default", "Ctrl-I"},
+		{"time/shift", "Default", "Ctrl-Shift-I"},
+		{"edit/line/delete", "Subtitle Grid", "Delete"},
+		{nullptr}
+	};
+
 #ifdef __WXMAC__
 	const char *added_hotkeys_minimize[][3] = {
 		{"app/minimize", "Default", "Ctrl-M"},
@@ -114,6 +121,19 @@ void init() {
 
 		hotkey::inst->SetHotkeyMap(std::move(hk_map));
 		migrations.emplace_back("duplicate -> split");
+	}
+
+	if (boost::find(migrations, "wsq: italic ctrl-i, grid delete") == end(migrations)) {
+		auto hk_map = hotkey::inst->GetHotkeyMap();
+		for (auto it = hk_map.begin(); it != hk_map.end(); ) {
+			if (it->first == "time/shift" && it->second.Context() == "Default" && it->second.Str() == "Ctrl-I")
+				it = hk_map.erase(it);
+			else
+				++it;
+		}
+		hotkey::inst->SetHotkeyMap(std::move(hk_map));
+		migrate_hotkeys(added_hotkeys_wsq);
+		migrations.emplace_back("wsq: italic ctrl-i, grid delete");
 	}
 
 #ifdef __WXMAC__

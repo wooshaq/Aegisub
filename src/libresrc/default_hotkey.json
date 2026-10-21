@@ -181,6 +181,9 @@
 			"Ctrl-6"
 		],
 		"time/shift" : [
+			"Ctrl-Shift-I"
+		],
+		"edit/line/italic" : [
 			"Ctrl-I"
 		],
 		"time/snap/end_video" : [
@@ -260,6 +263,9 @@
 		]
 	},
 	"Subtitle Grid" : {
+		"edit/line/delete" : [
+			"Delete"
+		],
 		"subtitle/select/all" : [
 			"Ctrl-A"
 		],
