@@ -335,6 +335,28 @@ bool AegisubApp::OnInit() {
 	return true;
 }
 
+// WsQ: mouse button 5 (XButton2 / "forward", wxEVT_AUX2_*) anywhere in a main window joins the
+// selected lines as dialogue. Handled here, before any control sees it, so it works wherever the
+// cursor is (grid, edit box, video, audio) and also for quick repeated presses (AUX2_DCLICK).
+int AegisubApp::FilterEvent(wxEvent& event) {
+	auto type = event.GetEventType();
+	if (type != wxEVT_AUX2_DOWN && type != wxEVT_AUX2_DCLICK)
+		return Event_Skip;
+
+	auto win = wxDynamicCast(event.GetEventObject(), wxWindow);
+	if (!win)
+		return Event_Skip;
+
+	wxWindow *top = wxGetTopLevelParent(win);
+	for (auto frame : frames) {
+		if (static_cast<wxWindow *>(frame) == top) {
+			cmd::call("edit/line/join/as_dialogue", frame->context.get());
+			return Event_Processed;
+		}
+	}
+	return Event_Skip;
+}
+
 int AegisubApp::OnExit() {
 	for (auto frame : frames)
 		delete frame;

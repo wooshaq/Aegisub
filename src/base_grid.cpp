@@ -369,8 +369,9 @@ void BaseGrid::OnPaint(wxPaintEvent &) {
 		else if (curDiag->Comment)
 			color = row_colors.Comment;
 
-		// WsQ: lines containing "www" (usually ads) are highlighted red
-		if (boost::icontains(curDiag->Text.get(), "www"))
+		// WsQ: lines that look like ads (contain "www", ".com" or ".net") are highlighted red
+		auto const& line_text = curDiag->Text.get();
+		if (boost::icontains(line_text, "www") || boost::icontains(line_text, ".com") || boost::icontains(line_text, ".net"))
 			color = inSel ? wxBrush(wxColour(229, 115, 115)) : wxBrush(wxColour(255, 186, 186));
 
 		if (OPT_GET("Subtitle/Grid/Highlight Subtitles in Frame")->GetBool() && IsDisplayed(curDiag)) {
@@ -443,12 +444,6 @@ void BaseGrid::OnScroll(wxScrollEvent &event) {
 }
 
 void BaseGrid::OnMouseEvent(wxMouseEvent &event) {
-	// WsQ: mouse button 5 (XButton2 / forward) joins the selected lines as dialogue
-	if (event.Aux2Down()) {
-		cmd::call("edit/line/join/as_dialogue", context);
-		return;
-	}
-
 	int h = GetClientSize().GetHeight();
 	bool shift = event.ShiftDown();
 	bool alt = event.AltDown();

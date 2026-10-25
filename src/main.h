@@ -55,6 +55,9 @@ class AegisubApp : public wxApp {
 	void OnFatalException() override;
 	bool OnExceptionInMainLoop() override;
 
+	/// WsQ: app-wide mouse button 5 handling
+	int FilterEvent(wxEvent& event) override;
+
 	void OnAssertFailure(const wxChar *file, int line, const wxChar *func, const wxChar *cond, const wxChar *msg) override;
 
 	void UnhandledException(bool);
