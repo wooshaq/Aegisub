@@ -22,9 +22,10 @@
         "audio/opt/autonext",
         "audio/opt/autoscroll",
         "audio/opt/spectrum",
-        "app/toggle/global_hotkeys",
         "",
-        "audio/karaoke"
+        "time/wsq/shift/backward",
+        "time/wsq/shift/forward",
+        "wsq/shift_frames"
     ],
     "main" : [
         "subtitle/new",

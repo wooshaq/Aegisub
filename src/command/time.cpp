@@ -39,6 +39,7 @@
 #include "../dialogs.h"
 #include "../include/aegisub/context.h"
 #include "../libresrc/libresrc.h"
+#include "../options.h"
 #include "../project.h"
 #include "../selection_controller.h"
 #include "../video_controller.h"
@@ -144,6 +145,61 @@ struct time_frame_current final : public validate_video_loaded {
 		}
 
 		c->ass->Commit(_("shift to frame"), AssFile::COMMIT_DIAG_TIME);
+	}
+};
+
+// WsQ: quick shift by N frames from the audio toolbar. Uses the "Affect" and "Times"
+// settings of the Shift Times dialog; the frame count comes from the toolbar field.
+void wsq_shift_frames(agi::Context *c, int direction) {
+	int frames = std::max<int>(1, OPT_GET("Tool/WsQ/Shift Frames")->GetInt()) * direction;
+	int mode = OPT_GET("Tool/Shift Times/Affect")->GetInt();  // 0 all, 1 selected, 2 selection onward
+	int type = OPT_GET("Tool/Shift Times/Type")->GetInt();    // 0 start+end, 1 start, 2 end
+	bool start = type != 2;
+	bool end = type != 1;
+
+	agi::vfr::Framerate fps = c->project->Timecodes();
+	if (!fps.IsLoaded())
+		fps = agi::vfr::Framerate(24000, 1001);
+
+	auto shift = [&](int time, agi::vfr::Time kind) {
+		return std::max(0, fps.TimeAtFrame(frames + fps.FrameAtTime(time, kind), kind));
+	};
+
+	auto const& sel = c->selectionController->GetSelectedSet();
+	bool reached_selection = false;
+	for (auto& line : c->ass->Events) {
+		bool selected = !!sel.count(&line);
+		if (selected) reached_selection = true;
+		if (mode == 1 && !selected) continue;
+		if (mode == 2 && !reached_selection) continue;
+		if (start) line.Start = shift(line.Start, agi::vfr::START);
+		if (end) line.End = shift(line.End, agi::vfr::END);
+	}
+
+	c->ass->Commit(_("shifting"), AssFile::COMMIT_DIAG_TIME);
+}
+
+struct time_wsq_shift_backward final : public Command {
+	CMD_NAME("time/wsq/shift/backward")
+	CMD_ICON(wsq_shift_back)
+	STR_MENU("Shift Earlier by Frames")
+	STR_DISP("Shift Earlier by Frames")
+	STR_HELP("Shift subtitles earlier by the number of frames set in the toolbar field (uses the Shift Times dialog's Affect/Times settings)")
+
+	void operator()(agi::Context *c) override {
+		wsq_shift_frames(c, -1);
+	}
+};
+
+struct time_wsq_shift_forward final : public Command {
+	CMD_NAME("time/wsq/shift/forward")
+	CMD_ICON(wsq_shift_forward)
+	STR_MENU("Shift Later by Frames")
+	STR_DISP("Shift Later by Frames")
+	STR_HELP("Shift subtitles later by the number of frames set in the toolbar field (uses the Shift Times dialog's Affect/Times settings)")
+
+	void operator()(agi::Context *c) override {
+		wsq_shift_frames(c, 1);
 	}
 };
 
@@ -376,6 +432,8 @@ struct time_prev final : public Command {
 
 namespace cmd {
 	void init_time() {
+		reg(std::make_unique<time_wsq_shift_backward>());
+		reg(std::make_unique<time_wsq_shift_forward>());
 		reg(std::make_unique<time_add_lead_both>());
 		reg(std::make_unique<time_add_lead_in>());
 		reg(std::make_unique<time_add_lead_out>());

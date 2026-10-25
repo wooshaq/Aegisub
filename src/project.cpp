@@ -411,12 +411,24 @@ void Project::LoadVideo(agi::fs::path path) {
 	if (OPT_GET("Video/Open Audio")->GetBool() && audio_file != video_file && video_provider->HasAudio())
 		DoLoadAudio(video_file, true);
 
+	LoadSubtitlesFromVideoMaybe();
+
 	double dar = video_provider->GetDAR();
 	if (dar > 0)
 		context->videoController->SetAspectRatio(dar);
 	else
 		context->videoController->SetAspectRatio(AspectRatio::Default);
 	context->videoController->JumpToFrame(0);
+}
+
+// WsQ: an MKV with embedded subtitles opened while no subtitle file is open (untitled and
+// unmodified) also loads its subtitles, as if "Open Subtitles from Video" had been used.
+void Project::LoadSubtitlesFromVideoMaybe() {
+	if (!video_has_subtitles || video_file.empty())
+		return;
+	if (context->subsController->HasFilename() || context->subsController->IsModified())
+		return;
+	LoadSubtitles(video_file, "", false);
 }
 
 void Project::CloseVideo() {
@@ -569,6 +581,9 @@ void Project::LoadList(std::vector<agi::fs::path> const& files) {
 		DoLoadAudio(audio, false);
 	else if (OPT_GET("Video/Open Audio")->GetBool() && audio_file != video_file)
 		DoLoadAudio(video_file, true);
+
+	if (subs.empty() && !video.empty())
+		LoadSubtitlesFromVideoMaybe();
 
 	if (!subs.empty())
 		LoadUnloadFiles(properties);

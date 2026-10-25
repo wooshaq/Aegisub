@@ -29,6 +29,8 @@
 
 #include "base_grid.h"
 
+#include "command/command.h"
+
 #include "include/aegisub/context.h"
 #include "include/aegisub/hotkey.h"
 #include "include/aegisub/menu.h"
@@ -48,6 +50,7 @@
 #include <libaegisub/util.h>
 
 #include <algorithm>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include <wx/dcbuffer.h>
 #include <wx/menu.h>
@@ -366,6 +369,10 @@ void BaseGrid::OnPaint(wxPaintEvent &) {
 		else if (curDiag->Comment)
 			color = row_colors.Comment;
 
+		// WsQ: lines containing "www" (usually ads) are highlighted red
+		if (boost::icontains(curDiag->Text.get(), "www"))
+			color = inSel ? wxBrush(wxColour(229, 115, 115)) : wxBrush(wxColour(255, 186, 186));
+
 		if (OPT_GET("Subtitle/Grid/Highlight Subtitles in Frame")->GetBool() && IsDisplayed(curDiag)) {
 			if (color == row_colors.Default)
 				color = row_colors.Visible;
@@ -436,6 +443,12 @@ void BaseGrid::OnScroll(wxScrollEvent &event) {
 }
 
 void BaseGrid::OnMouseEvent(wxMouseEvent &event) {
+	// WsQ: mouse button 5 (XButton2 / forward) joins the selected lines as dialogue
+	if (event.Aux2Down()) {
+		cmd::call("edit/line/join/as_dialogue", context);
+		return;
+	}
+
 	int h = GetClientSize().GetHeight();
 	bool shift = event.ShiftDown();
 	bool alt = event.AltDown();

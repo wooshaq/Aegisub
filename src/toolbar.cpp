@@ -34,6 +34,7 @@
 #include <vector>
 
 #include <wx/frame.h>
+#include <wx/spinctrl.h>
 #include <wx/toolbar.h>
 
 namespace {
@@ -116,6 +117,20 @@ namespace {
 					if (!last_was_sep)
 						AddSeparator();
 					last_was_sep = true;
+					continue;
+				}
+
+				// WsQ: small field with the frame count for the quick shift buttons
+				if (command_name == "wsq/shift_frames") {
+					auto spin = new wxSpinCtrl(this, -1, wxEmptyString, wxDefaultPosition,
+						wxSize(FromDIP(52), -1), wxSP_ARROW_KEYS | wxALIGN_RIGHT, 1, 999,
+						std::max<int>(1, OPT_GET("Tool/WsQ/Shift Frames")->GetInt()));
+					spin->SetToolTip(_("Frames to shift by with the arrow buttons"));
+					auto store = [spin](wxCommandEvent&) { OPT_SET("Tool/WsQ/Shift Frames")->SetInt(spin->GetValue()); };
+					spin->Bind(wxEVT_SPINCTRL, store);
+					spin->Bind(wxEVT_TEXT, store);
+					AddControl(spin);
+					last_was_sep = false;
 					continue;
 				}
 

@@ -68,6 +68,9 @@ class SubsController : private agi::signal::ConnectionScope {
 	/// The filename of the currently open file, if any
 	agi::fs::path filename;
 
+	/// WsQ: drop empty / ad lines at the end of the file before saving
+	void RemoveTrailingJunkLines();
+
 	/// Set the filename, updating things like the MRU and last used path
 	void SetFileName(agi::fs::path const& file);
 
@@ -91,6 +94,9 @@ public:
 
 	/// The file's path and filename if any, or platform-appropriate "untitled"
 	agi::fs::path Filename() const;
+
+	/// WsQ: true if the subtitles have a real file name (not "Untitled")
+	bool HasFilename() const { return !filename.empty(); }
 
 	/// Does the file have unsaved changes?
 	bool IsModified() const { return commit_id != saved_commit_id; };

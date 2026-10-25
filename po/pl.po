@@ -7244,3 +7244,21 @@ msgstr "Przełącz kursywę (cała linia)"
 
 msgid "Toggle italics for the selected text, or for the whole selected lines when no text is selected"
 msgstr "Przełącza kursywę zaznaczonego tekstu, a gdy nic nie jest zaznaczone – całych zaznaczonych linii"
+
+msgid "Shift Earlier by Frames"
+msgstr "Przesuń wcześniej o klatki"
+
+msgid "Shift Later by Frames"
+msgstr "Przesuń później o klatki"
+
+msgid "Shift subtitles earlier by the number of frames set in the toolbar field (uses the Shift Times dialog's Affect/Times settings)"
+msgstr "Przesuwa napisy wcześniej o liczbę klatek z pola na pasku (zakres i rodzaj czasów jak w oknie Przesuń czasy)"
+
+msgid "Shift subtitles later by the number of frames set in the toolbar field (uses the Shift Times dialog's Affect/Times settings)"
+msgstr "Przesuwa napisy później o liczbę klatek z pola na pasku (zakres i rodzaj czasów jak w oknie Przesuń czasy)"
+
+msgid "Frames to shift by with the arrow buttons"
+msgstr "Liczba klatek do przesunięcia strzałkami"
+
+msgid "remove trailing empty/ad lines"
+msgstr "usuń puste/reklamowe linie z końca"

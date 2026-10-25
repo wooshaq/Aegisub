@@ -40,6 +40,7 @@
 #include "utils.h"
 #include "video_frame.h"
 
+#include <boost/algorithm/string/case_conv.hpp>
 #include <libaegisub/fs.h>
 
 #include <string_view>
@@ -160,6 +161,20 @@ void FFmpegSourceVideoProvider::LoadVideo(agi::fs::path const& filename, ycbcr::
 
 	int TrackNumber = -1;
 	if (TrackList.size() > 1) {
+		// WsQ: cover art attached to an MKV shows up as an extra single-image "video" track
+		// (mjpeg/png/...). If exactly one real video track is left, use it without asking.
+		std::vector<int> RealTracks;
+		for (auto const& track : TrackList) {
+			const char *codec = FFMS_GetCodecNameI(Indexer, track.first);
+			std::string name = codec ? codec : "";
+			boost::to_lower(name);
+			if (name != "mjpeg" && name != "png" && name != "bmp" && name != "gif" && name != "webp" && name != "tiff")
+				RealTracks.push_back(track.first);
+		}
+		if (RealTracks.size() == 1)
+			TrackNumber = RealTracks[0];
+	}
+	if (TrackList.size() > 1 && TrackNumber < 0) {
 		auto Selection = AskForTrackSelection(TrackList, FFMS_TYPE_VIDEO);
 		if (Selection == TrackSelection::None)
 			throw agi::UserCancelException("video loading cancelled by user");

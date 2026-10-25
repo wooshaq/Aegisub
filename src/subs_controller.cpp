@@ -38,6 +38,10 @@
 #include <libaegisub/path.h>
 #include <libaegisub/util.h>
 
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string/trim.hpp>
+
 #include <wx/msgdlg.h>
 
 namespace {
@@ -202,6 +206,8 @@ void SubsController::Save(agi::fs::path const& filename, const char *encoding) {
 	if (!writer)
 		throw agi::InvalidInputException("Unknown file type.");
 
+	RemoveTrailingJunkLines();
+
 	int old_autosaved_commit_id = autosaved_commit_id, old_saved_commit_id = saved_commit_id;
 	try {
 		autosaved_commit_id = saved_commit_id = commit_id;
@@ -222,6 +228,44 @@ void SubsController::Save(agi::fs::path const& filename, const char *encoding) {
 	}
 
 	SetFileName(filename);
+}
+
+// WsQ: before saving, drop lines at the very end of the file that are empty (no text once
+// override tags and \N are removed) or are the "Find More Subtitles at SubtitleNexus.com" ad.
+void SubsController::RemoveTrailingJunkLines() {
+	auto is_junk = [](AssDialogue const& line) {
+		auto text = line.GetStrippedText();
+		boost::replace_all(text, "\\N", " ");
+		boost::replace_all(text, "\\n", " ");
+		boost::replace_all(text, "\\h", " ");
+		boost::trim(text);
+		return text.empty() || boost::icontains(text, "subtitlenexus.com");
+	};
+
+	auto& events = context->ass->Events;
+	auto selection = context->selectionController->GetSelectedSet();
+	auto active = context->selectionController->GetActiveLine();
+	bool removed = false, active_removed = false;
+
+	while (events.size() > 1 && is_junk(events.back())) {
+		AssDialogue *line = &events.back();
+		selection.erase(line);
+		if (line == active) active_removed = true;
+		delete line;
+		removed = true;
+	}
+
+	if (!removed) return;
+
+	if (active_removed || selection.empty()) {
+		AssDialogue *last = &events.back();
+		if (selection.empty()) selection.insert(last);
+		context->selectionController->SetSelectionAndActive(std::move(selection), active_removed ? last : active);
+	}
+	else
+		context->selectionController->SetSelectedSet(std::move(selection));
+
+	context->ass->Commit(_("remove trailing empty/ad lines"), AssFile::COMMIT_DIAG_ADDREM);
 }
 
 void SubsController::Close() {

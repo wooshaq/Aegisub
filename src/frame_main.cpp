@@ -62,6 +62,7 @@
 #include <libaegisub/dispatch.h>
 #include <libaegisub/log.h>
 
+#include <wx/display.h>
 #include <wx/dnd.h>
 #include <wx/msgdlg.h>
 #include <wx/sizer.h>
@@ -120,6 +121,15 @@ FrameMain::FrameMain()
 	StartupLog("Initializing context frames");
 	context->parent = this;
 	context->frame = this;
+
+	StartupLog("Apply saved window geometry");
+	{
+		// WsQ: restore last window position and size (only if it is still on a connected screen)
+		wxRect r(OPT_GET("App/WsQ Window/X")->GetInt(), OPT_GET("App/WsQ Window/Y")->GetInt(),
+			OPT_GET("App/WsQ Window/Width")->GetInt(), OPT_GET("App/WsQ Window/Height")->GetInt());
+		if (r.width >= 300 && r.height >= 200 && wxDisplay::GetFromPoint(r.GetTopLeft() + wxPoint(40, 10)) != wxNOT_FOUND)
+			SetSize(r);
+	}
 
 	StartupLog("Apply saved Maximized state");
 	if (OPT_GET("App/Maximized")->GetBool()) Maximize(true);
@@ -325,6 +335,15 @@ void FrameMain::OnCloseWindow(wxCloseEvent &event) {
 
 	// Store maximization state
 	OPT_SET("App/Maximized")->SetBool(IsMaximized());
+
+	// WsQ: store the normal (non-maximized) window geometry
+	if (!IsMaximized() && !IsIconized()) {
+		wxRect r = GetRect();
+		OPT_SET("App/WsQ Window/X")->SetInt(r.x);
+		OPT_SET("App/WsQ Window/Y")->SetInt(r.y);
+		OPT_SET("App/WsQ Window/Width")->SetInt(r.width);
+		OPT_SET("App/WsQ Window/Height")->SetInt(r.height);
+	}
 
 	Destroy();
 }
