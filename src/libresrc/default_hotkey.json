@@ -107,6 +107,9 @@
 		]
 	},
 	"Default" : {
+		"edit/line/join/as_dialogue" : [
+			"Mouse5"
+		],
 		"app/exit" : [
 			"Ctrl-Q"
 		],

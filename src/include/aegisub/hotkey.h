@@ -37,6 +37,12 @@ void clear();
 
 bool check(std::string_view context, agi::Context *c, wxKeyEvent &evt);
 std::string keypress_to_str(int key_code, int modifier);
+
+/// WsQ: mouse side buttons as hotkeys. button is 4 (XButton1/back) or 5 (XButton2/forward);
+/// produces combos like "Mouse5" or "Ctrl-Shift-Mouse4".
+std::string mouse_to_str(int button, int modifier);
+/// WsQ: run the command bound to a mouse side button; true if one was bound
+bool check_mouse(std::string_view context, agi::Context *c, int button, int modifier);
 std::string_view get_hotkey_str_first(std::string_view context, std::string_view command);
 std::vector<std::string> get_hotkey_strs(std::string_view context, std::string_view command);
 

@@ -637,6 +637,10 @@ public:
 		ctrl->SetInsertionPointEnd();
 		ctrl->SelectAll();
 		ctrl->Bind(wxEVT_CHAR_HOOK, &HotkeyRenderer::OnKeyDown, this);
+		// WsQ: pressing mouse button 4/5 in the field binds it ("Mouse4"/"Mouse5")
+		ctrl->Bind(wxEVT_AUX1_DOWN, [this](wxMouseEvent &evt) { ctrl->ChangeValue(to_wx(hotkey::mouse_to_str(4, evt.GetModifiers()))); });
+		ctrl->Bind(wxEVT_AUX2_DOWN, [this](wxMouseEvent &evt) { ctrl->ChangeValue(to_wx(hotkey::mouse_to_str(5, evt.GetModifiers()))); });
+		ctrl->SetToolTip(_("Press a key combination or mouse button 4/5"));
 		return ctrl;
 	}
 

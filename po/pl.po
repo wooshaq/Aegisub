@@ -7262,3 +7262,6 @@ msgstr "Liczba klatek do przesunięcia strzałkami"
 
 msgid "remove trailing empty/ad lines"
 msgstr "usuń puste/reklamowe linie z końca"
+
+msgid "Press a key combination or mouse button 4/5"
+msgstr "Naciśnij kombinację klawiszy albo przycisk myszy 4/5"

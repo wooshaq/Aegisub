@@ -335,13 +335,16 @@ bool AegisubApp::OnInit() {
 	return true;
 }
 
-// WsQ: mouse button 5 (XButton2 / "forward", wxEVT_AUX2_*) anywhere in a main window joins the
-// selected lines as dialogue. Handled here, before any control sees it, so it works wherever the
-// cursor is (grid, edit box, video, audio) and also for quick repeated presses (AUX2_DCLICK).
+// WsQ: mouse side buttons (4 = XButton1/back, 5 = XButton2/forward) anywhere in a main window run
+// the command bound to "Mouse4"/"Mouse5" (with Ctrl/Alt/Shift) in the hotkey settings. Handled here,
+// before any control sees it, so it works over the grid, edit box, video and audio alike, and also
+// for quick repeated presses (AUX*_DCLICK). By default Mouse5 joins the selected lines as dialogue.
 int AegisubApp::FilterEvent(wxEvent& event) {
 	auto type = event.GetEventType();
-	if (type != wxEVT_AUX2_DOWN && type != wxEVT_AUX2_DCLICK)
-		return Event_Skip;
+	int button = 0;
+	if (type == wxEVT_AUX1_DOWN || type == wxEVT_AUX1_DCLICK) button = 4;
+	else if (type == wxEVT_AUX2_DOWN || type == wxEVT_AUX2_DCLICK) button = 5;
+	else return Event_Skip;
 
 	auto win = wxDynamicCast(event.GetEventObject(), wxWindow);
 	if (!win)
@@ -350,8 +353,10 @@ int AegisubApp::FilterEvent(wxEvent& event) {
 	wxWindow *top = wxGetTopLevelParent(win);
 	for (auto frame : frames) {
 		if (static_cast<wxWindow *>(frame) == top) {
-			cmd::call("edit/line/join/as_dialogue", frame->context.get());
-			return Event_Processed;
+			auto& mouse = static_cast<wxMouseEvent&>(event);
+			if (hotkey::check_mouse("Main Frame", frame->context.get(), button, mouse.GetModifiers()))
+				return Event_Processed;
+			return Event_Skip;
 		}
 	}
 	return Event_Skip;

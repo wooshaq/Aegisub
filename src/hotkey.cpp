@@ -54,6 +54,11 @@ namespace {
 		{nullptr}
 	};
 
+	const char *added_hotkeys_wsq_mouse[][3] = {
+		{"edit/line/join/as_dialogue", "Default", "Mouse5"},
+		{nullptr}
+	};
+
 #ifdef __WXMAC__
 	const char *added_hotkeys_minimize[][3] = {
 		{"app/minimize", "Default", "Ctrl-M"},
@@ -134,6 +139,11 @@ void init() {
 		hotkey::inst->SetHotkeyMap(std::move(hk_map));
 		migrate_hotkeys(added_hotkeys_wsq);
 		migrations.emplace_back("wsq: italic ctrl-i, grid delete");
+	}
+
+	if (boost::find(migrations, "wsq: mouse5 join as dialogue") == end(migrations)) {
+		migrate_hotkeys(added_hotkeys_wsq_mouse);
+		migrations.emplace_back("wsq: mouse5 join as dialogue");
 	}
 
 #ifdef __WXMAC__
@@ -255,6 +265,26 @@ std::string keypress_to_str(int key_code, int modifier) {
 		combo += keycode_name(key_code);
 
 	return combo;
+}
+
+std::string mouse_to_str(int button, int modifier) {
+	// keypress_to_str with a key code of 0 yields just the modifier prefix
+	return keypress_to_str(0, modifier) + "Mouse" + std::to_string(button);
+}
+
+bool check_mouse(std::string_view context, agi::Context *c, int button, int modifier) {
+	try {
+		auto command = inst->Scan(context, mouse_to_str(button, modifier), false);
+		if (command.empty())
+			return false;
+		cmd::call(command, c);
+		return true;
+	}
+	catch (cmd::CommandNotFound const& e) {
+		wxMessageBox(to_wx(e.GetMessage()), _("Invalid command name for hotkey"),
+			wxOK | wxICON_ERROR | wxCENTER | wxSTAY_ON_TOP);
+		return true;
+	}
 }
 
 static bool check(std::string_view context, agi::Context *c, int key_code, int modifier) {

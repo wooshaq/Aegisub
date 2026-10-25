@@ -50,6 +50,14 @@
 #endif
 
 namespace {
+/// WsQ: first keyboard hotkey of a command for menu labels (mouse buttons can't be menu accelerators)
+std::string menu_hotkey(std::string_view command) {
+	for (auto const& hk : hotkey::get_hotkey_strs("Default", command))
+		if (hk.find("Mouse") == std::string::npos)
+			return hk;
+	return {};
+}
+
 
 class MruMenu final : public wxMenu {
 	/// Window ID of first menu item
@@ -163,7 +171,7 @@ class CommandManager {
 			text = c->StrMenu(context);
 		else
 			text = item.second->GetItemLabel().BeforeFirst('\t');
-		item.second->SetItemLabel(text + "\t" + to_wx(hotkey::get_hotkey_str_first("Default", c->name())));
+		item.second->SetItemLabel(text + "\t" + to_wx(menu_hotkey(c->name())));
 	}
 
 public:
@@ -194,7 +202,7 @@ public:
 			flags & cmd::COMMAND_TOGGLE ? wxITEM_CHECK :
 			wxITEM_NORMAL;
 
-		menu_text += "\t" + to_wx(hotkey::get_hotkey_str_first("Default", co->name()));
+		menu_text += "\t" + to_wx(menu_hotkey(co->name()));
 
 		wxMenuItem *item = new wxMenuItem(parent, id_base + items.size(), menu_text, co->StrHelp(), kind);
 #ifndef __WXMAC__
