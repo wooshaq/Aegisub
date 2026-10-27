@@ -41,6 +41,24 @@ namespace agi::ass { class Karaoke; }
 
 #include "audio_marker.h"
 
+#include <wx/string.h>
+
+/// A subtitle line as drawn on the audio display: its box, text and stats
+struct AudioLineInfo {
+	/// Time range of the line, including uncommitted changes
+	TimeRange range;
+	/// Text with override blocks stripped and \N turned into newlines
+	wxString text;
+	/// 1-based row number in the grid
+	int row;
+	/// Characters per second, or -1 if not meaningful
+	int cps;
+	/// Is this the active line?
+	bool active;
+	/// Is this one of the selected lines?
+	bool selected;
+};
+
 /// @class AudioTimingController
 /// @brief Base class for objects controlling audio timing
 ///
@@ -154,6 +172,11 @@ public:
 	///
 	/// Used only to pick the mouse cursor when not near a marker.
 	virtual bool IsNearbyLine(int) const { return false; }
+
+	/// @brief Get the subtitle lines to draw as boxes with their text
+	/// @param range Only lines overlapping this range are needed
+	/// @param[out] out Lines are added to this, in drawing order (topmost last)
+	virtual void GetLineInfo(TimeRange const&, std::vector<AudioLineInfo> &) const { }
 
 	/// @brief Is the drag started by the last OnLeftClick moving whole lines?
 	///

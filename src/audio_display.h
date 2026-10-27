@@ -175,6 +175,9 @@ class AudioDisplay: public wxWindow {
 	/// @param dc DC to paint to
 	/// @param updtime Time range to repaint
 	void PaintLabels(wxDC &dc, TimeRange updtime);
+	/// Paint the subtitle lines' text, number, duration and CPS in their
+	/// boxes, and highlight where lines overlap
+	void PaintLineInfo(wxDC &dc, TimeRange updtime, wxRect const& updrect);
 
 	/// Paint the track cursor
 	/// @param dc DC to paint to

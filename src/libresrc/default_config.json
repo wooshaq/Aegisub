@@ -9,9 +9,11 @@
 			"Save on Every Change" : false
 		},
 		"Call Tips" : false,
+		"Dark Theme" : true,
 		"First Start" : true,
 		"Hotkey Migrations" : [{"string": "placeholder since empty arrays aren't supported"}],
 		"Language" : "",
+		"Theme Applied" : "",
 		"Maximized" : false,
 		"Save Charset" : "UTF-8",
 		"Save UI State" : true,
@@ -49,6 +51,7 @@
 				"Inactive Comments" : false,
 				"Keyframes in Dialogue Mode" : true,
 				"Keyframes in Karaoke Mode" : true,
+				"Line Text" : true,
 				"Seconds" : true,
 				"Video Position" : true
 			},
@@ -110,6 +113,11 @@
 		"Audio Display" : {
 			"Keyframe" : "rgb(255,0,255)",
 			"Line Boundary Inactive Line" : "rgb(190,190,190)",
+			"Line Info" : "rgb(176,184,194)",
+			"Line Info Warning" : "rgb(255,150,128)",
+			"Line Text" : "rgb(240,242,245)",
+			"Line Text Inactive" : "rgb(196,202,210)",
+			"Overlap" : "rgba(245,165,36,90)",
 			"Line boundary End" : "rgb(0, 0, 216)",
 			"Line boundary Start" : "rgb(216, 0, 0)",
 			"Play Cursor" : "rgb(255,255,255)",

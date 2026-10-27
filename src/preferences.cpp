@@ -192,7 +192,7 @@ void Audio(wxTreebook *book, Preferences *parent) {
 	p->OptionAdd(display, _("Cursor time"), "Audio/Display/Draw/Cursor Time");
 	p->OptionAdd(display, _("Video position"), "Audio/Display/Draw/Video Position");
 	p->OptionAdd(display, _("Seconds boundaries"), "Audio/Display/Draw/Seconds");
-	p->CellSkip(display);
+	p->OptionAdd(display, _("Line text and info"), "Audio/Display/Draw/Line Text");
 	p->OptionChoice(display, _("Waveform Style"), AudioWaveformRenderer::GetWaveformStyles(), "Audio/Display/Waveform Style");
 
 	auto label = p->PageSizer(_("Audio labels"));
@@ -272,6 +272,9 @@ void Video(wxTreebook *book, Preferences *parent) {
 void Interface(wxTreebook *book, Preferences *parent) {
 	auto p = new OptionPage(book, parent, _("Interface"));
 
+	auto appearance = p->PageSizer(_("Appearance"));
+	p->OptionAdd(appearance, _("Dark theme"), "App/Dark Theme");
+
 	auto edit_box = p->PageSizer(_("Edit Box"));
 	p->OptionAdd(edit_box, _("Enable call tips"), "App/Call Tips");
 	p->OptionAdd(edit_box, _("Overwrite in time boxes"), "Subtitle/Time Edit/Insert Mode");
@@ -316,6 +319,11 @@ void Interface_Colours(wxTreebook *book, Preferences *parent) {
 	p->OptionAdd(audio, _("Line boundary start"), "Colour/Audio Display/Line boundary Start");
 	p->OptionAdd(audio, _("Line boundary end"), "Colour/Audio Display/Line boundary End");
 	p->OptionAdd(audio, _("Line boundary inactive line"), "Colour/Audio Display/Line Boundary Inactive Line");
+	p->OptionAdd(audio, _("Line text"), "Colour/Audio Display/Line Text");
+	p->OptionAdd(audio, _("Inactive line text"), "Colour/Audio Display/Line Text Inactive");
+	p->OptionAdd(audio, _("Line info"), "Colour/Audio Display/Line Info");
+	p->OptionAdd(audio, _("Line info over CPS limit"), "Colour/Audio Display/Line Info Warning");
+	p->OptionAdd(audio, _("Overlapping lines"), "Colour/Audio Display/Overlap");
 	p->OptionAdd(audio, _("Syllable boundaries"), "Colour/Audio Display/Syllable Boundaries");
 	p->OptionAdd(audio, _("Seconds boundaries"), "Colour/Audio Display/Seconds Line");
 

@@ -872,6 +872,7 @@ void AudioDisplay::OnPaint(wxPaintEvent&)
 				std::max(0, TimeFromRelativeX(updrect.x + updrect.width + foot_size)));
 
 			PaintAudio(dc, updtime, updrect);
+			PaintLineInfo(gcdc, updtime, updrect);
 			PaintMarkers(gcdc, updtime);
 			PaintLabels(dc, updtime);
 		}
@@ -978,6 +979,133 @@ void AudioDisplay::PaintLabels(wxDC &dc, TimeRange updtime)
 		{
 			dc.DrawText(label.text, left + (width - extent.GetWidth()) / 2, audio_top + 4);
 		}
+	}
+}
+
+namespace {
+/// Word-wrap text to a pixel width, keeping at most max_lines lines
+std::vector<wxString> WrapText(wxDC &dc, wxString const& text, int width, size_t max_lines)
+{
+	std::vector<wxString> lines;
+	bool truncated = false;
+	for (auto const& paragraph : wxSplit(text, '\n', 0)) {
+		if (lines.size() >= max_lines) { truncated = true; break; }
+		wxString current;
+		for (auto const& word : wxSplit(paragraph, ' ', 0)) {
+			if (word.empty()) continue;
+			wxString candidate = current.empty() ? word : current + " " + word;
+			if (current.empty() || dc.GetTextExtent(candidate).GetWidth() <= width) {
+				current = candidate;
+				continue;
+			}
+			lines.push_back(current);
+			current = word;
+			if (lines.size() >= max_lines) { truncated = true; break; }
+		}
+		if (truncated) break;
+		lines.push_back(current);
+	}
+	if (lines.size() > max_lines) {
+		lines.resize(max_lines);
+		truncated = true;
+	}
+	if (truncated && !lines.empty())
+		lines.back() += wxS("\u2026");
+	return lines;
+}
+}
+
+void AudioDisplay::PaintLineInfo(wxDC &dc, TimeRange updtime, wxRect const& updrect)
+{
+	if (!OPT_GET("Audio/Display/Draw/Line Text")->GetBool()) return;
+
+	std::vector<AudioLineInfo> lines;
+	controller->GetTimingController()->GetLineInfo(updtime, lines);
+	if (lines.empty()) return;
+
+	wxDCPenChanger pen_retainer(dc, *wxTRANSPARENT_PEN);
+	wxDCBrushChanger brush_retainer(dc, *wxTRANSPARENT_BRUSH);
+	wxDCFontChanger font_retainer(dc);
+	wxDCTextColourChanger colour_retainer(dc);
+
+	// Overlaps between any two lines
+	{
+		std::vector<TimeRange> ranges;
+		for (auto const& line : lines)
+			ranges.push_back(line.range);
+		std::sort(ranges.begin(), ranges.end(), [](TimeRange const& a, TimeRange const& b) { return a.begin() < b.begin(); });
+
+		wxColour overlap = to_wx(OPT_GET("Colour/Audio Display/Overlap")->GetColor());
+		wxColour hatch(overlap.Red(), overlap.Green(), overlap.Blue(), std::min(255, overlap.Alpha() + 80));
+		for (size_t i = 0; i < ranges.size(); ++i) {
+			for (size_t j = i + 1; j < ranges.size() && ranges[j].begin() < ranges[i].end(); ++j) {
+				int x1 = RelativeXFromTime(ranges[j].begin());
+				int x2 = RelativeXFromTime(std::min(ranges[i].end(), ranges[j].end()));
+				if (x2 <= x1) continue;
+				wxRect r(x1, audio_top, x2 - x1, audio_height);
+				dc.SetBrush(wxBrush(overlap));
+				dc.DrawRectangle(r);
+				dc.SetBrush(wxBrush(hatch, wxBRUSHSTYLE_BDIAGONAL_HATCH));
+				dc.DrawRectangle(r);
+			}
+		}
+	}
+
+	wxFont font = dc.GetFont();
+	const wxColour text_active = to_wx(OPT_GET("Colour/Audio Display/Line Text")->GetColor());
+	const wxColour text_inactive = to_wx(OPT_GET("Colour/Audio Display/Line Text Inactive")->GetColor());
+	const wxColour info_colour = to_wx(OPT_GET("Colour/Audio Display/Line Info")->GetColor());
+	const wxColour warn_colour = to_wx(OPT_GET("Colour/Audio Display/Line Info Warning")->GetColor());
+	const int cps_warn = OPT_GET("Subtitle/Character Counter/CPS Warning Threshold")->GetInt();
+
+	dc.SetFont(font);
+	const int line_height = dc.GetTextExtent(wxS("Ay")).GetHeight();
+	const int pad = 4;
+
+	for (auto const& line : lines) {
+		const int x1 = RelativeXFromTime(line.range.begin()) + pad;
+		const int x2 = RelativeXFromTime(line.range.end()) - pad;
+		const int width = x2 - x1;
+		if (width < 12) continue;
+
+		wxRect box(x1, audio_top + pad, width, audio_height - 2 * pad);
+		wxRect clip = box.Intersect(updrect);
+		if (clip.IsEmpty()) continue;
+		dc.SetClippingRegion(clip);
+
+		// Bottom: "#row · duration · cps"
+		int text_bottom = box.GetBottom();
+		if (box.GetHeight() >= line_height * 2 + pad) {
+			wxString info = wxString::Format(wxS("#%d \u00b7 %.2fs"), line.row, line.range.length() / 1000.0);
+			if (line.cps >= 0)
+				info += wxString::Format(wxS(" \u00b7 %d cps"), line.cps);
+			wxFont small = font;
+			small.SetPointSize(std::max(6, font.GetPointSize() - 1));
+			dc.SetFont(small);
+			dc.SetTextForeground(line.cps > cps_warn ? warn_colour : info_colour);
+			int info_height = dc.GetTextExtent(info).GetHeight();
+			dc.DrawText(info, x1, box.GetBottom() - info_height);
+			text_bottom -= info_height + 2;
+			dc.SetFont(font);
+		}
+
+		// Top: the text, wrapped to the box
+		if (!line.text.empty()) {
+			wxFont text_font = font;
+			if (line.active) text_font.SetWeight(wxFONTWEIGHT_BOLD);
+			dc.SetFont(text_font);
+			dc.SetTextForeground(line.active || line.selected ? text_active : text_inactive);
+			// Too narrow to wrap words sensibly: just show what fits of one line
+			size_t max_lines = width < 48 ? 1 : std::max(1, (text_bottom - box.GetTop()) / line_height);
+			int y = box.GetTop();
+			for (auto const& row : WrapText(dc, line.text, width, max_lines)) {
+				dc.DrawText(row, x1, y);
+				y += line_height;
+			}
+			dc.SetFont(font);
+		}
+
+		dc.DestroyClippingRegion();
 	}
 }
 

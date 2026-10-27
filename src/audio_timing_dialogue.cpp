@@ -33,6 +33,7 @@
 #include "audio_rendering_style.h"
 #include "audio_timing.h"
 #include "command/command.h"
+#include "compat.h"
 #include "include/aegisub/context.h"
 #include "options.h"
 #include "pen.h"
@@ -42,6 +43,7 @@
 #include <list>
 
 #include <libaegisub/ass/time.h>
+#include <libaegisub/character_count.h>
 
 #include <boost/range/algorithm.hpp>
 
@@ -441,6 +443,7 @@ public:
 	void ModifyStart(int delta) override;
 	bool IsNearbyMarker(int ms, int sensitivity, bool alt_down) const override;
 	bool IsNearbyLine(int ms) const override;
+	void GetLineInfo(TimeRange const& range, std::vector<AudioLineInfo> &out) const override;
 	bool IsMovingLines() const override { return line_move.active; }
 	std::vector<AudioMarker*> OnLeftClick(int ms, bool ctrl_down, bool alt_down, int sensitivity, int snap_range) override;
 	std::vector<AudioMarker*> OnRightClick(int ms, bool, int sensitivity, int snap_range) override;
@@ -504,6 +507,45 @@ void AudioTimingControllerDialogue::OnFileChanged(int type) {
 		Revert();
 	else if (type & AssFile::COMMIT_DIAG_ADDREM)
 		RegenerateInactiveLines();
+	else if (type & AssFile::COMMIT_DIAG_TEXT)
+		AnnounceMarkerMoved(); // Redraw the line text on the audio display
+}
+
+void AudioTimingControllerDialogue::GetLineInfo(TimeRange const& range, std::vector<AudioLineInfo> &out) const
+{
+	auto const& sel = context->selectionController->GetSelectedSet();
+	auto add = [&](TimeableLine const& line, bool active) {
+		AssDialogue *diag = line.GetLine();
+		if (!diag) return;
+		TimeRange line_range = line;
+		if (line_range.end() < range.begin() || line_range.begin() > range.end()) return;
+
+		wxString text = to_wx(diag->GetStrippedText());
+		text.Replace("\\N", "\n");
+		text.Replace("\\n", "\n");
+		text.Replace("\\h", " ");
+
+		// Same as the grid's CPS column, but with the times shown here
+		int cps = -1;
+		int duration = line_range.length();
+		auto const& raw = diag->Text.get();
+		if (duration > 100 && raw.size() <= static_cast<size_t>(duration)) {
+			int ignore = agi::IGNORE_BLOCKS;
+			if (OPT_GET("Subtitle/Character Counter/Ignore Whitespace")->GetBool())
+				ignore |= agi::IGNORE_WHITESPACE;
+			if (OPT_GET("Subtitle/Character Counter/Ignore Punctuation")->GetBool())
+				ignore |= agi::IGNORE_PUNCTUATION;
+			cps = agi::CharacterCount(raw, ignore) * 1000 / duration;
+		}
+
+		out.push_back({line_range, text, diag->Row + 1, cps, active, !active && sel.count(diag) > 0});
+	};
+
+	for (auto const& line : inactive_lines)
+		add(line, false);
+	for (auto const& line : selected_lines)
+		add(line, false);
+	add(active_line, true);
 }
 
 void AudioTimingControllerDialogue::GetRenderingStyles(AudioRenderingStyleRanges &ranges) const
