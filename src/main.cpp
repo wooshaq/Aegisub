@@ -51,6 +51,7 @@
 #include "options.h"
 #include "project.h"
 #include "subs_controller.h"
+#include "theme.h"
 #include "subtitles_provider_libass.h"
 #include "utils.h"
 #include "value_event.h"
@@ -279,6 +280,9 @@ bool AegisubApp::OnInit() {
 		StartupLog("Register export filters");
 		AssExportFilterChain::Register(std::make_unique<AssFixStylesFilter>());
 		AssExportFilterChain::Register(std::make_unique<AssTransformFramerateFilter>());
+
+		StartupLog("Apply theme");
+		theme::Init();
 
 		StartupLog("Install PNG handler");
 		wxImage::AddHandler(new wxPNGHandler);
