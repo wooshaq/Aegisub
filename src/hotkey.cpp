@@ -141,6 +141,27 @@ void init() {
 		migrations.emplace_back("wsq: italic ctrl-i, grid delete");
 	}
 
+	if (boost::find(migrations, "wsq: enter inserts line break") == end(migrations)) {
+		// Enter in the edit box now types \N; committing and going to the
+		// next line moves to Ctrl-Enter (numpad Enter keeps doing it)
+		auto hk_map = hotkey::inst->GetHotkeyMap();
+		bool moved = false;
+		for (auto it = hk_map.begin(); it != hk_map.end(); ) {
+			if (it->first == "grid/line/next/create" && it->second.Context() == "Subtitle Edit Box" && it->second.Str() == "Enter") {
+				it = hk_map.erase(it);
+				moved = true;
+			}
+			else
+				++it;
+		}
+		if (moved) {
+			hk_map.insert(make_pair(std::string("edit/insert_line_break"), agi::hotkey::Combo("Subtitle Edit Box", "edit/insert_line_break", "Enter")));
+			hk_map.insert(make_pair(std::string("grid/line/next/create"), agi::hotkey::Combo("Subtitle Edit Box", "grid/line/next/create", "Ctrl-Enter")));
+			hotkey::inst->SetHotkeyMap(std::move(hk_map));
+		}
+		migrations.emplace_back("wsq: enter inserts line break");
+	}
+
 	if (boost::find(migrations, "wsq: mouse5 join as dialogue") == end(migrations)) {
 		migrate_hotkeys(added_hotkeys_wsq_mouse);
 		migrations.emplace_back("wsq: mouse5 join as dialogue");

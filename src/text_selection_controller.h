@@ -37,6 +37,10 @@ public:
 	void SetSelection(int start, int end);
 	void SetInsertionPoint(int point);
 
+	/// Replace the selected text (or insert at the caret) as if typed
+	/// @return false if there is no text control
+	bool ReplaceSelection(const char *text);
+
 	int GetSelectionStart() const { return selection_start; }
 	int GetSelectionEnd() const { return selection_end; }
 	int GetInsertionPoint() const { return insertion_point; }

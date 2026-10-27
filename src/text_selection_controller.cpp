@@ -66,6 +66,12 @@ void TextSelectionController::SetInsertionPoint(int position) {
 	AnnounceSelectionChanged();
 }
 
+bool TextSelectionController::ReplaceSelection(const char *text) {
+	if (!ctrl) return false;
+	ctrl->ReplaceSelection(wxString::FromUTF8(text));
+	return true;
+}
+
 void TextSelectionController::SetSelection(int start, int end) {
 	changing = true;
 	SET(selection_start, start, SetSelectionStart);

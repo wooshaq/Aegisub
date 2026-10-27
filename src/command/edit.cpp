@@ -458,6 +458,19 @@ struct edit_style_italic final : public Command {
 	}
 };
 
+struct edit_insert_line_break final : public Command {
+	CMD_NAME("edit/insert_line_break")
+	STR_MENU("Insert Line Break")
+	STR_DISP("Insert Line Break")
+	STR_HELP("Insert a hard line break (\\N) at the cursor position")
+
+	void operator()(agi::Context *c) override {
+		// Typed into the edit box like any other text, so it applies to the
+		// same lines and is undone the same way as typing
+		c->textSelectionController->ReplaceSelection("\\N");
+	}
+};
+
 struct edit_line_italic final : public validate_sel_nonempty {
 	CMD_NAME("edit/line/italic")
 	CMD_ICON(button_italics)
@@ -1371,6 +1384,7 @@ namespace cmd {
 		reg(std::make_unique<edit_line_join_concatenate>());
 		reg(std::make_unique<edit_line_join_as_dialogue>());
 		reg(std::make_unique<edit_line_italic>());
+		reg(std::make_unique<edit_insert_line_break>());
 		reg(std::make_unique<edit_line_join_keep_first>());
 		reg(std::make_unique<edit_line_paste>());
 		reg(std::make_unique<edit_line_paste_over>());

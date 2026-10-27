@@ -260,8 +260,11 @@
 		"edit/color/shadow" : [
 			"Alt-4"
 		],
+		"edit/insert_line_break" : [
+			"Enter"
+		],
 		"grid/line/next/create" : [
-			"Enter",
+			"Ctrl-Enter",
 			"KP_Enter"
 		]
 	},
