@@ -149,6 +149,18 @@ public:
 	/// controlling the mouse cursor.
 	virtual bool IsNearbyMarker(int ms, int sensitivity, bool alt_down) const = 0;
 
+	/// @brief Determine if a position is inside a line which can be dragged as a whole
+	/// @param ms The time in milliseconds to test
+	///
+	/// Used only to pick the mouse cursor when not near a marker.
+	virtual bool IsNearbyLine(int) const { return false; }
+
+	/// @brief Is the drag started by the last OnLeftClick moving whole lines?
+	///
+	/// Whole-line drags only start once the mouse has travelled a few pixels,
+	/// so that a plain click on a line never nudges its times.
+	virtual bool IsMovingLines() const { return false; }
+
 	/// @brief The user pressed the left mouse button on the audio
 	/// @param ms          The time in milliseconds the user clicked
 	/// @param ctrl_down   Is the user currently holding the ctrl key down?

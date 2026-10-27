@@ -334,6 +334,28 @@ class AudioTimingControllerDialogue final : public AudioTimingController, privat
 	const agi::OptionValue *inactive_line_mode = OPT_GET("Audio/Inactive Lines Display Mode");
 	const agi::OptionValue *inactive_line_comments = OPT_GET("Audio/Display/Draw/Inactive Comments");
 	const agi::OptionValue *drag_timing = OPT_GET("Audio/Drag Timing");
+	const agi::OptionValue *drag_lines = OPT_GET("Audio/Drag Lines");
+
+	/// State of a whole-line drag (grabbing a line by its body and moving it
+	/// in time, keeping its duration)
+	struct LineMove {
+		/// Is a whole-line drag in progress?
+		bool active = false;
+		/// Time which was clicked to start the drag
+		int origin_ms = 0;
+		/// Markers being moved, as handed to the audio display
+		std::vector<AudioMarker*> markers;
+		/// The moved markers and their positions when the drag started
+		std::vector<std::pair<DialogueTimingMarker*, int>> originals;
+		/// Earliest original position of any moved marker
+		int min_pos = 0;
+		/// Original times of the grabbed line
+		int start = 0, end = 0;
+		/// Keep the grabbed line between its neighbours?
+		bool clamp = false;
+		/// Allowed time range for the grabbed line when clamping
+		int lower = 0, upper = INT_MAX;
+	} line_move;
 
 	agi::signal::Connection commit_connection;
 	agi::signal::Connection audio_open_connection;
@@ -378,6 +400,26 @@ class AudioTimingControllerDialogue final : public AudioTimingController, privat
 	/// @param user_triggered Is this a user-initiated commit or an autocommit
 	void DoCommit(bool user_triggered);
 
+	/// Find a displayed line other than the active one with a marker near the given time
+	/// @return The nearest such line's dialogue, or nullptr
+	AssDialogue *FindLineEdge(int ms, int sensitivity) const;
+
+	/// Find a displayed line (active, selected or inactive) containing the given time
+	/// @return The line, or nullptr
+	const TimeableLine *FindLineAt(int ms) const;
+
+	/// Make a line the active one, as if it was clicked in the grid. A line
+	/// that is part of a multi-line selection keeps the selection.
+	/// @return Did the line become active?
+	bool MakeActive(AssDialogue *line);
+
+	/// Start dragging the active line (and the rest of the selection, if the
+	/// active line is part of it) as a whole
+	std::vector<AudioMarker*> BeginLineMove(int ms);
+
+	/// Continue a whole-line drag to the given mouse position
+	void MoveLines(int ms, int snap_range);
+
 	void OnSelectedSetChanged();
 
 	// AssFile events
@@ -398,6 +440,8 @@ public:
 	void ModifyLength(int delta, bool shift_following) override;
 	void ModifyStart(int delta) override;
 	bool IsNearbyMarker(int ms, int sensitivity, bool alt_down) const override;
+	bool IsNearbyLine(int ms) const override;
+	bool IsMovingLines() const override { return line_move.active; }
 	std::vector<AudioMarker*> OnLeftClick(int ms, bool ctrl_down, bool alt_down, int sensitivity, int snap_range) override;
 	std::vector<AudioMarker*> OnRightClick(int ms, bool, int sensitivity, int snap_range) override;
 	void OnMarkerDrag(std::vector<AudioMarker*> const& markers, int new_position, int snap_range) override;
@@ -575,7 +619,156 @@ void AudioTimingControllerDialogue::ModifyStart(int delta) {
 bool AudioTimingControllerDialogue::IsNearbyMarker(int ms, int sensitivity, bool alt_down) const
 {
 	assert(sensitivity >= 0);
-	return alt_down || active_line.ContainsMarker(TimeRange(ms-sensitivity, ms+sensitivity));
+	if (alt_down || active_line.ContainsMarker(TimeRange(ms-sensitivity, ms+sensitivity)))
+		return true;
+	return drag_lines->GetBool() && FindLineEdge(ms, sensitivity);
+}
+
+bool AudioTimingControllerDialogue::IsNearbyLine(int ms) const
+{
+	return drag_lines->GetBool() && FindLineAt(ms);
+}
+
+AssDialogue *AudioTimingControllerDialogue::FindLineEdge(int ms, int sensitivity) const
+{
+	AssDialogue *found = nullptr;
+	int best = sensitivity + 1;
+	auto check = [&](TimeableLine const& line) {
+		if (!line.GetLine()) return;
+		int dist = std::min(tabs(*line.GetLeftMarker() - ms), tabs(*line.GetRightMarker() - ms));
+		if (dist < best) {
+			best = dist;
+			found = line.GetLine();
+		}
+	};
+	for (auto const& line : selected_lines)
+		check(line);
+	for (auto const& line : inactive_lines)
+		check(line);
+	return found;
+}
+
+const TimeableLine *AudioTimingControllerDialogue::FindLineAt(int ms) const
+{
+	if (active_line.GetLine() && TimeRange(active_line).contains(ms))
+		return &active_line;
+	for (auto const& line : selected_lines) {
+		if (line.GetLine() && TimeRange(line).contains(ms))
+			return &line;
+	}
+
+	// Inactive lines may overlap; prefer the one which started last, as
+	// that's the one drawn on top
+	const TimeableLine *found = nullptr;
+	for (auto const& line : inactive_lines) {
+		if (!line.GetLine() || !TimeRange(line).contains(ms)) continue;
+		if (!found || *line.GetLeftMarker() > *found->GetLeftMarker())
+			found = &line;
+	}
+	return found;
+}
+
+bool AudioTimingControllerDialogue::MakeActive(AssDialogue *line)
+{
+	if (!line) return false;
+	auto sel = context->selectionController.get();
+	if (sel->GetActiveLine() == line) return true;
+
+	// Changing the active line reverts uncommitted changes, which would be a
+	// surprising thing for a click on the audio display to do
+	if (!modified_lines.empty())
+		DoCommit(true);
+
+	if (sel->GetSelectedSet().count(line))
+		sel->SetActiveLine(line);
+	else
+		sel->SetSelectionAndActive({line}, line);
+	return sel->GetActiveLine() == line;
+}
+
+std::vector<AudioMarker*> AudioTimingControllerDialogue::BeginLineMove(int ms)
+{
+	line_move = LineMove{};
+	line_move.active = true;
+	line_move.origin_ms = ms;
+
+	AssDialogue *line = active_line.GetLine();
+	auto const& sel = context->selectionController->GetSelectedSet();
+	const bool whole_selection = sel.size() > 1 && sel.count(line);
+
+	active_line.GetMarkers(&line_move.markers);
+	if (whole_selection) {
+		for (auto const& selected : selected_lines)
+			selected.GetMarkers(&line_move.markers);
+	}
+
+	line_move.min_pos = INT_MAX;
+	for (auto m : line_move.markers) {
+		auto marker = static_cast<DialogueTimingMarker*>(m);
+		line_move.originals.emplace_back(marker, marker->GetPosition());
+		line_move.min_pos = std::min(line_move.min_pos, marker->GetPosition());
+	}
+
+	TimeRange range = active_line;
+	line_move.start = range.begin();
+	line_move.end = range.end();
+
+	// A single line is kept between the lines around it, unless it already
+	// overlaps one of them. A whole selection moves freely, as a block.
+	if (!whole_selection) {
+		bool overlapping = false;
+		for (auto const& other : context->ass->Events) {
+			if (&other == line || other.Comment) continue;
+			int start = other.Start, end = other.End;
+			if (start < line_move.start) {
+				if (end > line_move.start)
+					overlapping = true;
+				else
+					line_move.lower = std::max(line_move.lower, end);
+			}
+			else if (start < line_move.end || start == line_move.start)
+				overlapping = true;
+			else
+				line_move.upper = std::min(line_move.upper, start);
+		}
+		line_move.clamp = !overlapping;
+	}
+
+	return line_move.markers;
+}
+
+void AudioTimingControllerDialogue::MoveLines(int ms, int snap_range)
+{
+	auto apply = [&](int shift) {
+		for (auto const& [marker, pos] : line_move.originals)
+			marker->SetPosition(pos + shift);
+	};
+
+	int shift = ms - line_move.origin_ms;
+	apply(shift);
+	shift += SnapMarkers(snap_range, line_move.markers);
+
+	// Never move anything before zero
+	shift = std::max(shift, -line_move.min_pos);
+
+	if (line_move.clamp) {
+		if (line_move.upper - line_move.lower < line_move.end - line_move.start)
+			shift = 0; // Doesn't fit between its neighbours at all
+		else if (line_move.start + shift < line_move.lower)
+			shift = line_move.lower - line_move.start;
+		else if (line_move.end + shift > line_move.upper)
+			shift = line_move.upper - line_move.end;
+	}
+
+	apply(shift);
+	for (auto const& [marker, pos] : line_move.originals)
+		modified_lines.insert(marker->GetLine());
+
+	boost::sort(markers, marker_ptr_cmp());
+
+	if (auto_commit->GetBool()) DoCommit(false);
+	UpdateSelection();
+	AnnounceMarkerMoved();
 }
 
 std::vector<AudioMarker*> AudioTimingControllerDialogue::OnLeftClick(int ms, bool ctrl_down, bool alt_down, int sensitivity, int snap_range)
@@ -586,6 +779,7 @@ std::vector<AudioMarker*> AudioTimingControllerDialogue::OnLeftClick(int ms, boo
 	std::vector<AudioMarker*> ret;
 
 	clicked_ms = INT_MIN;
+	line_move.active = false;
 	if (alt_down)
 	{
 		clicked_ms = ms;
@@ -600,6 +794,27 @@ std::vector<AudioMarker*> AudioTimingControllerDialogue::OnLeftClick(int ms, boo
 
 	int dist_l = tabs(*left - ms);
 	int dist_r = tabs(*right - ms);
+
+	if (dist_l > sensitivity && dist_r > sensitivity && drag_lines->GetBool())
+	{
+		// Not near the active line's markers: grab another line by its edge
+		// or any line by its body, Subtitle Edit style
+		if (AssDialogue *edge_line = FindLineEdge(ms, sensitivity))
+		{
+			if (MakeActive(edge_line))
+			{
+				left = active_line.GetLeftMarker();
+				right = active_line.GetRightMarker();
+				dist_l = tabs(*left - ms);
+				dist_r = tabs(*right - ms);
+			}
+		}
+		else if (const TimeableLine *body = FindLineAt(ms))
+		{
+			if (body == &active_line || MakeActive(body->GetLine()))
+				return BeginLineMove(ms);
+		}
+	}
 
 	if (dist_l > sensitivity && dist_r > sensitivity)
 	{
@@ -638,6 +853,7 @@ std::vector<AudioMarker*> AudioTimingControllerDialogue::OnLeftClick(int ms, boo
 std::vector<AudioMarker*> AudioTimingControllerDialogue::OnRightClick(int ms, bool, int, int snap_range)
 {
 	clicked_ms = INT_MIN;
+	line_move.active = false;
 	std::vector<AudioMarker*> ret = GetRightMarkers();
 	SetMarkers(ret, ms, snap_range);
 	return ret;
@@ -645,7 +861,10 @@ std::vector<AudioMarker*> AudioTimingControllerDialogue::OnRightClick(int ms, bo
 
 void AudioTimingControllerDialogue::OnMarkerDrag(std::vector<AudioMarker*> const& markers, int new_position, int snap_range)
 {
-	SetMarkers(markers, new_position, snap_range);
+	if (line_move.active)
+		MoveLines(new_position, snap_range);
+	else
+		SetMarkers(markers, new_position, snap_range);
 }
 
 void AudioTimingControllerDialogue::UpdateSelection()
@@ -858,7 +1077,7 @@ int AudioTimingControllerDialogue::SnapMarkers(int snap_range, std::vector<Audio
 		inactive_markers.push_back(*m);
 	};
 
-	bool moving_entire_selection = clicked_ms != INT_MIN;
+	bool moving_entire_selection = clicked_ms != INT_MIN || line_move.active;
 	for (auto const& line : inactive_lines)
 	{
 		// If we're alt-dragging the entire selection, there can't be any

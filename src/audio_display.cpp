@@ -48,6 +48,7 @@
 #include <libaegisub/audio/provider.h>
 
 #include <algorithm>
+#include <cstdlib>
 
 #include <wx/dcbuffer.h>
 #include <wx/dcgraph.h>
@@ -545,18 +546,34 @@ class AudioMarkerInteractionObject final : public AudioDisplayInteractionObject 
 	bool default_snap = OPT_GET("Audio/Snap/Enable")->GetBool();
 	// Range in pixels to snap at
 	int snap_range = OPT_GET("Audio/Snap/Distance")->GetInt();
+	// X position where the drag started
+	int start_x;
+	// Pixels the mouse must travel before dragging starts, 0 once it has
+	int drag_threshold;
 
 public:
-	AudioMarkerInteractionObject(std::vector<AudioMarker*> markers, AudioTimingController *timing_controller, AudioDisplay *display, wxMouseButton button_used)
+	AudioMarkerInteractionObject(std::vector<AudioMarker*> markers, AudioTimingController *timing_controller, AudioDisplay *display, wxMouseButton button_used, int start_x, int drag_threshold)
 	: markers(std::move(markers))
 	, timing_controller(timing_controller)
 	, display(display)
 	, button_used(button_used)
+	, start_x(start_x)
+	, drag_threshold(drag_threshold)
 	{
 	}
 
 	bool OnMouseEvent(wxMouseEvent &event) override
 	{
+		// Ignore the first few pixels of a drag that needs a threshold, so a
+		// plain click (with a bit of hand jitter) doesn't change anything.
+		// Once crossed, it stays a drag even if the mouse comes back.
+		if (event.Dragging() && drag_threshold > 0)
+		{
+			if (std::abs(event.GetPosition().x - start_x) < drag_threshold)
+				return !event.ButtonUp(button_used);
+			drag_threshold = 0;
+		}
+
 		if (event.Dragging())
 		{
 			timing_controller->OnMarkerDrag(
@@ -1118,6 +1135,8 @@ void AudioDisplay::OnMouseEvent(wxMouseEvent& event)
 
 		if (timing->IsNearbyMarker(timepos, drag_sensitivity, event.AltDown()))
 			SetCursor(wxCursor(wxCURSOR_SIZEWE));
+		else if (timing->IsNearbyLine(timepos))
+			SetCursor(wxCursor(wxCURSOR_HAND));
 		else
 			SetCursor(wxNullCursor);
 		return;
@@ -1137,7 +1156,10 @@ void AudioDisplay::OnMouseEvent(wxMouseEvent& event)
 		if (markers.size())
 		{
 			RemoveTrackCursor();
-			audio_marker = std::make_unique<AudioMarkerInteractionObject>(markers, timing, this, (wxMouseButton)event.GetButton());
+			const int drag_threshold = event.LeftDown() && timing->IsMovingLines() ? 3 : 0;
+			audio_marker = std::make_unique<AudioMarkerInteractionObject>(markers, timing, this, (wxMouseButton)event.GetButton(), mouse_x, drag_threshold);
+			if (drag_threshold)
+				SetCursor(wxCursor(wxCURSOR_HAND));
 			SetDraggedObject(audio_marker.get());
 			return;
 		}
