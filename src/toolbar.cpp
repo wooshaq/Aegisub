@@ -33,8 +33,12 @@
 #include <boost/interprocess/streams/bufferstream.hpp>
 #include <vector>
 
+#include <wx/bmpbuttn.h>
 #include <wx/frame.h>
+#include <wx/panel.h>
+#include <wx/sizer.h>
 #include <wx/spinctrl.h>
+#include <wx/tglbtn.h>
 #include <wx/toolbar.h>
 
 namespace {
@@ -201,7 +205,127 @@ namespace {
 	};
 }
 
+namespace {
+	/// WsQ: a toolbar made of real framed buttons, sized like the edit box
+	/// buttons, so the audio toolbar matches the rows below it
+	class ButtonBar final : public wxPanel {
+		struct Button {
+			cmd::Command *command;
+			wxAnyButton *button;
+			wxBitmapToggleButton *toggle; ///< Same as button for toggles, else null
+		};
+
+		std::string name;
+		agi::Context *context;
+		std::string ht_context;
+		std::vector<Button> buttons;
+		agi::signal::Connection hotkeys_changed_slot;
+
+		void UpdateTooltips() {
+			for (auto const& b : buttons)
+				b.button->SetToolTip(b.command->GetTooltip(ht_context));
+		}
+
+		void OnIdle(wxIdleEvent &evt) {
+			evt.Skip();
+			for (auto const& b : buttons) {
+				int type = b.command->Type();
+				if (type & cmd::COMMAND_VALIDATE) {
+					bool enable = b.command->Validate(context);
+					if (b.button->IsEnabled() != enable)
+						b.button->Enable(enable);
+				}
+				if (b.toggle && (type & (cmd::COMMAND_TOGGLE | cmd::COMMAND_RADIO))) {
+					bool active = b.command->IsActive(context);
+					if (b.toggle->GetValue() != active)
+						b.toggle->SetValue(active);
+				}
+			}
+		}
+
+	public:
+		ButtonBar(wxWindow *parent, std::string name, agi::Context *c, std::string ht_context)
+		: wxPanel(parent, -1)
+		, name(std::move(name))
+		, context(c)
+		, ht_context(std::move(ht_context))
+		, hotkeys_changed_slot(hotkey::inst->AddHotkeyChangeListener(&ButtonBar::UpdateTooltips, this))
+		{
+			auto root_it = get_root().find(this->name);
+			if (root_it == get_root().end())
+				throw agi::InternalError("Toolbar named " + this->name + " not found.");
+
+			const wxSize button_size = FromDIP(wxSize(26, 26));
+			const int icon_size = 16;
+			auto sizer = new wxBoxSizer(wxHORIZONTAL);
+			bool gap_pending = false;
+
+			auto add = [&](wxWindow *w) {
+				if (!sizer->IsEmpty())
+					sizer->AddSpacer(FromDIP(gap_pending ? 10 : 2));
+				gap_pending = false;
+				sizer->Add(w, wxSizerFlags().Center());
+			};
+
+			for (json::String const& command_name : static_cast<json::Array const&>(root_it->second)) {
+				if (command_name.empty()) {
+					gap_pending = true;
+					continue;
+				}
+
+				if (command_name == "wsq/shift_frames") {
+					auto spin = new wxSpinCtrl(this, -1, wxEmptyString, wxDefaultPosition,
+						wxSize(FromDIP(56), button_size.GetHeight()), wxSP_ARROW_KEYS | wxALIGN_RIGHT, 1, 999,
+						std::max<int>(1, OPT_GET("Tool/WsQ/Shift Frames")->GetInt()));
+					spin->SetToolTip(_("Frames to shift by with the arrow buttons"));
+					auto store = [spin](wxCommandEvent&) { OPT_SET("Tool/WsQ/Shift Frames")->SetInt(spin->GetValue()); };
+					spin->Bind(wxEVT_SPINCTRL, store);
+					spin->Bind(wxEVT_TEXT, store);
+					add(spin);
+					continue;
+				}
+
+				cmd::Command *command;
+				try {
+					command = cmd::get(command_name);
+				}
+				catch (cmd::CommandNotFound const&) {
+					LOG_W("toolbar/command/not_found") << "Command '" << command_name << "' not found; skipping";
+					continue;
+				}
+
+				wxAnyButton *button;
+				wxBitmapToggleButton *toggle = nullptr;
+				if (command->Type() & (cmd::COMMAND_TOGGLE | cmd::COMMAND_RADIO))
+					button = toggle = new wxBitmapToggleButton(this, -1, command->Icon(icon_size));
+				else
+					button = new wxBitmapButton(this, -1, command->Icon(icon_size));
+				// At least as large as the edit box buttons; larger only if the
+				// platform's button padding needs it, so the icon is never clipped
+				wxSize size = button->GetBestSize();
+				size.IncTo(button_size);
+				button->SetMinSize(size);
+				button->SetToolTip(command->GetTooltip(this->ht_context));
+				button->Bind(toggle ? wxEVT_TOGGLEBUTTON : wxEVT_BUTTON, [this, command](wxCommandEvent&) {
+					(*command)(context);
+				});
+				buttons.push_back({command, button, toggle});
+				add(button);
+			}
+
+			auto outer = new wxBoxSizer(wxHORIZONTAL);
+			outer->Add(sizer, wxSizerFlags().Border(wxTOP | wxBOTTOM, FromDIP(3)));
+			SetSizerAndFit(outer);
+			Bind(wxEVT_IDLE, &ButtonBar::OnIdle, this);
+		}
+	};
+}
+
 namespace toolbar {
+	wxWindow *GetButtonBar(wxWindow *parent, std::string const& name, agi::Context *c, std::string const& hotkey) {
+		return new ButtonBar(parent, name, c, hotkey);
+	}
+
 	void AttachToolbar(wxFrame *frame, std::string const& name, agi::Context *c, std::string const& hotkey) {
 		new Toolbar(frame, name, c, hotkey);
 	}
