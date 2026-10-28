@@ -107,7 +107,9 @@ void Init() {
 		wxTheApp->SetAppearance(wxApp::Appearance::Dark);
 #endif
 
-	theme_connection = OPT_SUB("App/Dark Theme", OnThemeChanged);
+	// A lambda rather than the function itself: passing the function pointer
+	// crashes MSVC (internal compiler error in the signal adder template)
+	theme_connection = OPT_SUB("App/Dark Theme", [](agi::OptionValue const& opt) { OnThemeChanged(opt); });
 }
 
 bool IsDark() {
