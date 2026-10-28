@@ -282,6 +282,11 @@ TimeEdit *SubsEditBox::MakeTimeCtrl(wxString const& tooltip, TimeField field) {
 void SubsEditBox::MakeButton(const char *cmd_name) {
 	cmd::Command *command = cmd::get(cmd_name);
 	wxBitmapButton *btn = new wxBitmapButton(this, -1, command->Icon());
+	// wxWidgets 3.3 draws bitmap buttons without padding; keep them as large
+	// as they were so they stay easy to click
+	wxSize min_size = btn->GetBestSize();
+	min_size.IncTo(FromDIP(wxSize(26, 26)));
+	btn->SetMinSize(min_size);
 	tool_tip_bindings.emplace_back(btn, command->StrHelp(), "Subtitle Edit Box", cmd_name);
 
 	middle_right_sizer->Add(btn, wxSizerFlags().Expand());
