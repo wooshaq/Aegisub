@@ -85,6 +85,8 @@ class BaseGrid final : public wxWindow {
 		wxBrush Visible;
 		wxBrush SelectedComment;
 		wxBrush LeftCol;
+		wxBrush Ad;
+		wxBrush SelectedAd;
 	} row_colors;
 
 	std::vector<AssDialogue*> index_line_map;  ///< Row number -> dialogue line

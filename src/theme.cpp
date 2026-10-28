@@ -44,6 +44,8 @@ const ThemeColour palette[] = {
 	{"Colour/Subtitle Grid/Background/Inframe",            "rgb(255, 253, 234)", "rgb(34, 39, 46)"},
 	{"Colour/Subtitle Grid/Background/Selected Comment",   "rgb(211, 238, 238)", "rgb(43, 42, 69)"},
 	{"Colour/Subtitle Grid/Background/Selection",          "rgb(206, 255, 231)", "rgb(29, 53, 87)"},
+	{"Colour/Subtitle Grid/Background/Ad",                 "rgb(255, 186, 186)", "rgb(78, 30, 36)"},
+	{"Colour/Subtitle Grid/Background/Selected Ad",        "rgb(229, 115, 115)", "rgb(128, 40, 50)"},
 	{"Colour/Subtitle Grid/Collision",                     "rgb(255,0,0)",       "rgb(245, 184, 75)"},
 	{"Colour/Subtitle Grid/CPS Error",                     "rgb(255,0,0)",       "rgb(176, 64, 44)"},
 	{"Colour/Subtitle Grid/Header",                        "rgb(165, 207, 231)", "rgb(35, 38, 43)"},
@@ -90,7 +92,7 @@ void ApplyPalette(bool dark) {
 		OPT_SET("Audio/Colour Schemes")->SetListString(std::move(schemes));
 	}
 	OPT_SET("Colour/Audio Display/Waveform")->SetString(dark ? "WsQ Blue" : "Green");
-	OPT_SET("App/Theme Applied")->SetString(dark ? "dark2" : "light");
+	OPT_SET("App/Theme Applied")->SetString(dark ? "dark3" : "light");
 }
 
 void OnThemeChanged(agi::OptionValue const& opt) {
@@ -104,8 +106,8 @@ namespace theme {
 
 void Init() {
 	const bool dark = OPT_GET("App/Dark Theme")->GetBool();
-	// "dark2": the dark palette now also sets the blue waveform
-	if (OPT_GET("App/Theme Applied")->GetString() != (dark ? "dark2" : "light"))
+	// "dark3": bump when the dark palette changes so existing users get it
+	if (OPT_GET("App/Theme Applied")->GetString() != (dark ? "dark3" : "light"))
 		ApplyPalette(dark);
 
 	// White icons for dark backgrounds; like the native controls this is

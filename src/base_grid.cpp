@@ -194,6 +194,8 @@ void BaseGrid::UpdateStyle() {
 	row_colors.Visible.SetColour(to_wx(OPT_GET("Colour/Subtitle Grid/Background/Inframe")->GetColor()));
 	row_colors.SelectedComment.SetColour(to_wx(OPT_GET("Colour/Subtitle Grid/Background/Selected Comment")->GetColor()));
 	row_colors.LeftCol.SetColour(to_wx(OPT_GET("Colour/Subtitle Grid/Left Column")->GetColor()));
+	row_colors.Ad.SetColour(to_wx(OPT_GET("Colour/Subtitle Grid/Background/Ad")->GetColor()));
+	row_colors.SelectedAd.SetColour(to_wx(OPT_GET("Colour/Subtitle Grid/Background/Selected Ad")->GetColor()));
 
 	if (width_helper)
 		width_helper->ClearCache();
@@ -372,7 +374,7 @@ void BaseGrid::OnPaint(wxPaintEvent &) {
 		// WsQ: lines that look like ads (contain "www", ".com" or ".net") are highlighted red
 		auto const& line_text = curDiag->Text.get();
 		if (boost::icontains(line_text, "www") || boost::icontains(line_text, ".com") || boost::icontains(line_text, ".net"))
-			color = inSel ? wxBrush(wxColour(229, 115, 115)) : wxBrush(wxColour(255, 186, 186));
+			color = inSel ? row_colors.SelectedAd : row_colors.Ad;
 
 		if (OPT_GET("Subtitle/Grid/Highlight Subtitles in Frame")->GetBool() && IsDisplayed(curDiag)) {
 			if (color == row_colors.Default)

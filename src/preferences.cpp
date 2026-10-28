@@ -364,6 +364,8 @@ void Interface_Colours(wxTreebook *book, Preferences *parent) {
 	p->OptionAdd(grid, _("In frame background"), "Colour/Subtitle Grid/Background/Inframe");
 	p->OptionAdd(grid, _("Comment background"), "Colour/Subtitle Grid/Background/Comment");
 	p->OptionAdd(grid, _("Selected comment background"), "Colour/Subtitle Grid/Background/Selected Comment");
+	p->OptionAdd(grid, _("Ad line background"), "Colour/Subtitle Grid/Background/Ad");
+	p->OptionAdd(grid, _("Selected ad line background"), "Colour/Subtitle Grid/Background/Selected Ad");
 	p->OptionAdd(grid, _("Header background"), "Colour/Subtitle Grid/Header");
 	p->OptionAdd(grid, _("Left Column"), "Colour/Subtitle Grid/Left Column");
 	p->OptionAdd(grid, _("Active Line Border"), "Colour/Subtitle Grid/Active Border");

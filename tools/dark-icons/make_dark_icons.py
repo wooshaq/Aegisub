@@ -332,7 +332,7 @@ simple('button_stop', rect(6, 6, 12, 12, 1.5, 'none', 0, W))
 simple('button_next', fill('M3.5 6l8 6-8 6zM12 6l8 6-8 6z'))
 simple('button_prev', fill('M20.5 6l-8 6 8 6zM12 6l-8 6 8 6z'))
 simple('button_playline', g_bracket_start(3.5), play(9, 12), g_bracket_end(20.5))
-simple('button_playsel', g_bracket_end(6, B), play(9, 12), g_bracket_start(18, B))
+simple('button_playsel', fill('M7 4.5l12 7.5-12 7.5z'))  # WsQ: a plain play button
 simple('button_playfirstfiveh', g_bracket_start(2.5), play(7, 12), path('M14.5 12h5M20.5 8.5v7', R, 2))
 simple('button_playlastfiveh', path('M3.5 8.5v7M4.5 12h5', B, 2), play(10.5, 12), g_bracket_end(21.5))
 simple('button_playfivehbefore', path('M2 12h1.5M5.5 12h1.5', R, 2), play(9, 12), g_bracket_start(18.5))

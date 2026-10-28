@@ -275,6 +275,8 @@
 				"Comment" : "rgb(216, 222, 245)",
 				"Inframe" : "rgb(255, 253, 234)",
 				"Selected Comment" : "rgb(211, 238, 238)",
+				"Ad" : "rgb(255, 186, 186)",
+				"Selected Ad" : "rgb(229, 115, 115)",
 				"Selection" : "rgb(206, 255, 231)"
 			},
 			"Collision" : "rgb(255,0,0)",
