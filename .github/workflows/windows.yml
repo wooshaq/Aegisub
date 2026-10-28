@@ -5,6 +5,8 @@ name: Windows build
 on:
   push:
     branches: [ 'wsq/**' ]
+    # Workflow edits alone do not need a new build
+    paths-ignore: [ '.github/**' ]
   workflow_dispatch:
     inputs:
       sccache:
@@ -326,3 +328,40 @@ jobs:
           if-no-files-found: error
 
   # Signing is kept out of the build job; see sign-windows.yml
+
+  # Publish the installer and portable zip as a GitHub Release (wsq-<build>)
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dl
+          merge-multiple: true
+
+      - name: Release name from the build number
+        id: ver
+        run: |
+          ls -la dl
+          exe=$(ls dl/Aegisub-*-x64.exe | head -1)
+          build=$(basename "$exe" | cut -d- -f2)
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: wsq-${{ steps.ver.outputs.build }}
+          target_commitish: ${{ github.sha }}
+          name: Aegisub WsQ ${{ steps.ver.outputs.build }}
+          body: |
+            Prywatny build Aegisuba (fork WsQ), tylko Windows x64.
+
+            - `Aegisub-*-x64.exe`: instalator
+            - `Aegisub-*-x64-portable.zip`: wersja przenośna, wystarczy rozpakować
+
+            Zbudowane z commita ${{ github.sha }} (gałąź `${{ github.ref_name }}`).
+          files: |
+            dl/Aegisub-*-x64.exe
+            dl/Aegisub-*-portable.zip

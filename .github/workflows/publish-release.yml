@@ -1,0 +1,58 @@
+name: Publish existing build
+
+# Publish the Windows artifacts of an already finished "Windows build" run as
+# a GitHub Release, without building again.
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: ID of the finished "Windows build" or "Meson CI" run
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          pattern: Windows MSVC Release - *
+          path: dl
+          merge-multiple: true
+
+      - name: Release name and commit
+        id: ver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la dl
+          exe=$(ls dl/Aegisub-*-x64.exe | head -1)
+          build=$(basename "$exe" | cut -d- -f2)
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+          sha=$(gh api "repos/${{ github.repository }}/actions/runs/${{ inputs.run_id }}" -q .head_sha)
+          branch=$(gh api "repos/${{ github.repository }}/actions/runs/${{ inputs.run_id }}" -q .head_branch)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: wsq-${{ steps.ver.outputs.build }}
+          target_commitish: ${{ steps.ver.outputs.sha }}
+          name: Aegisub WsQ ${{ steps.ver.outputs.build }}
+          body: |
+            Prywatny build Aegisuba (fork WsQ), tylko Windows x64.
+
+            - `Aegisub-*-x64.exe`: instalator
+            - `Aegisub-*-x64-portable.zip`: wersja przenośna, wystarczy rozpakować
+
+            Zbudowane z commita ${{ steps.ver.outputs.sha }} (gałąź `${{ steps.ver.outputs.branch }}`).
+          files: |
+            dl/Aegisub-*-x64.exe
+            dl/Aegisub-*-portable.zip
