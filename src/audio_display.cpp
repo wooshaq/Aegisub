@@ -1079,9 +1079,9 @@ void AudioDisplay::PaintLineInfo(wxDC &dc, TimeRange updtime, wxRect const& updr
 			wxString info = wxString::Format(wxS("#%d \u00b7 %.2fs"), line.row, line.range.length() / 1000.0);
 			if (line.cps >= 0)
 				info += wxString::Format(wxS(" \u00b7 %d cps"), line.cps);
-			wxFont small = font;
-			small.SetPointSize(std::max(6, font.GetPointSize() - 1));
-			dc.SetFont(small);
+			wxFont info_font = font;
+			info_font.SetPointSize(std::max(6, font.GetPointSize() - 1));
+			dc.SetFont(info_font);
 			dc.SetTextForeground(line.cps > cps_warn ? warn_colour : info_colour);
 			int info_height = dc.GetTextExtent(info).GetHeight();
 			dc.DrawText(info, x1, box.GetBottom() - info_height);
