@@ -58,6 +58,8 @@ jobs:
         with:
           tag_name: wsq-${{ steps.ver.outputs.build }}
           target_commitish: ${{ steps.ver.outputs.sha }}
+          # A draft creates no tag yet; publishing it from the GitHub page does
+          draft: true
           name: Aegisub WsQ ${{ steps.ver.outputs.build }}
           body: |
             Prywatny build Aegisuba (fork WsQ), tylko Windows x64.
