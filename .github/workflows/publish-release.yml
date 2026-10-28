@@ -2,7 +2,12 @@ name: Publish existing build
 
 # Publish the Windows artifacts of an already finished "Windows build" run as
 # a GitHub Release, without building again.
+# Run it by putting the run ID into .github/release-run-id on a wsq/* branch
+# and pushing (workflow_dispatch only works once this file is on master).
 on:
+  push:
+    branches: [ 'wsq/**' ]
+    paths: [ '.github/release-run-id' ]
   workflow_dispatch:
     inputs:
       run_id:
@@ -18,9 +23,17 @@ jobs:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github
+
+      - name: Which run
+        id: run
+        run: echo "id=${{ inputs.run_id }}$( [ -z '${{ inputs.run_id }}' ] && tr -d '[:space:]' < .github/release-run-id )" >> "$GITHUB_OUTPUT"
+
       - uses: actions/download-artifact@v4
         with:
-          run-id: ${{ inputs.run_id }}
+          run-id: ${{ steps.run.outputs.id }}
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
           pattern: Windows MSVC Release - *
@@ -36,8 +49,8 @@ jobs:
           exe=$(ls dl/Aegisub-*-x64.exe | head -1)
           build=$(basename "$exe" | cut -d- -f2)
           echo "build=$build" >> "$GITHUB_OUTPUT"
-          sha=$(gh api "repos/${{ github.repository }}/actions/runs/${{ inputs.run_id }}" -q .head_sha)
-          branch=$(gh api "repos/${{ github.repository }}/actions/runs/${{ inputs.run_id }}" -q .head_branch)
+          sha=$(gh api "repos/${{ github.repository }}/actions/runs/${{ steps.run.outputs.id }}" -q .head_sha)
+          branch=$(gh api "repos/${{ github.repository }}/actions/runs/${{ steps.run.outputs.id }}" -q .head_branch)
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
 
