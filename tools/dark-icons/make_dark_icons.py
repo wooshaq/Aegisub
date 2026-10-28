@@ -394,8 +394,11 @@ simple('visual_vector_clip_line', path('M5 19L19 5'), points((5, 19), (19, 5), s
 simple('visual_vector_clip_remove', path('M5 19L12 8l7 11', M, 1.6), points((5, 19), (19, 19), s=3.2), path('M9 4.5l6 6M15 4.5l-6 6', R, 2.2))
 simple('visual_help', path('M8.5 8.5a3.6 3.6 0 1 1 5.3 3.2c-1.2.7-1.8 1.5-1.8 2.8v.5', W, 2.2), circ(12, 19, 1.3, 'none', 0, W))
 
-# The WsQ shift buttons are already white on blue and keep their own icons.
-SKIP = {'wsq_shift_back', 'wsq_shift_forward'}
+# WsQ: shift the selected lines by N frames
+simple('wsq_shift_back', rect(3, 5, 2.6, 14, 0.8, 'none', 0, B), fill('M21 5.5v13L13.5 12zM13.5 5.5v13L6 12z'))
+simple('wsq_shift_forward', rect(18.4, 5, 2.6, 14, 0.8, 'none', 0, B), fill('M3 5.5v13l7.5-6.5zM10.5 5.5v13L18 12z'))
+
+SKIP = set()
 
 
 # ---------------------------------------------------------------------------
