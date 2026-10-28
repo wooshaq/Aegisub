@@ -18,8 +18,11 @@
 #include "theme.h"
 
 #include "options.h"
+#include "libresrc/libresrc.h"
 
 #include <libaegisub/color.h>
+
+#include <algorithm>
 
 #include <wx/app.h>
 #include <wx/intl.h>
@@ -80,7 +83,14 @@ agi::signal::Connection theme_connection;
 void ApplyPalette(bool dark) {
 	for (auto const& colour : palette)
 		OPT_SET(colour.option)->SetColor(agi::Color(dark ? colour.dark : colour.light));
-	OPT_SET("App/Theme Applied")->SetString(dark ? "dark" : "light");
+	// Older configs keep their own copy of the scheme list
+	auto schemes = OPT_GET("Audio/Colour Schemes")->GetListString();
+	if (std::find(schemes.begin(), schemes.end(), "WsQ Blue") == schemes.end()) {
+		schemes.emplace_back("WsQ Blue");
+		OPT_SET("Audio/Colour Schemes")->SetListString(std::move(schemes));
+	}
+	OPT_SET("Colour/Audio Display/Waveform")->SetString(dark ? "WsQ Blue" : "Green");
+	OPT_SET("App/Theme Applied")->SetString(dark ? "dark2" : "light");
 }
 
 void OnThemeChanged(agi::OptionValue const& opt) {
@@ -94,8 +104,13 @@ namespace theme {
 
 void Init() {
 	const bool dark = OPT_GET("App/Dark Theme")->GetBool();
-	if (OPT_GET("App/Theme Applied")->GetString() != (dark ? "dark" : "light"))
+	// "dark2": the dark palette now also sets the blue waveform
+	if (OPT_GET("App/Theme Applied")->GetString() != (dark ? "dark2" : "light"))
 		ApplyPalette(dark);
+
+	// White icons for dark backgrounds; like the native controls this is
+	// decided once, before any icon is loaded
+	libresrc_set_dark_icons(dark);
 
 	// Native controls follow the theme too. This must happen before any
 	// window is created, so changing it takes a restart.

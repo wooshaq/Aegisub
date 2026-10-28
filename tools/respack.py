@@ -53,3 +53,16 @@ with open(cppfile, 'w') as cpp:
 
         for group in sorted(groups):
             h.write('const LibresrcBlob {}[] = {{{}}};\n'.format(group, ', '.join('{{{}, sizeof({}), {}}}'.format(file, file, file.split('_')[-1]) for file in groups[group])))
+
+        # Themed lookup: <name>_themed(dark) gives the <name>_dark group when
+        # there is one and the dark theme is on, else the normal group.
+        light = [g for g in groups if not g.endswith('_dark')]
+        if light:
+            h.write('\n')
+        for group in sorted(light):
+            dark = group + '_dark'
+            if dark in groups:
+                h.write('inline LibresrcBlobs {0}_themed(bool dark) {{ return dark ? LibresrcBlobs{{{1}, {2}}} : LibresrcBlobs{{{0}, {3}}}; }}\n'
+                        .format(group, dark, len(groups[dark]), len(groups[group])))
+            else:
+                h.write('inline LibresrcBlobs {0}_themed(bool) {{ return LibresrcBlobs{{{0}, {1}}}; }}\n'.format(group, len(groups[group])))

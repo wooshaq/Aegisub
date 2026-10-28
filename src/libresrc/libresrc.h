@@ -23,6 +23,15 @@ struct LibresrcBlob {
 	int scale;
 };
 
+struct LibresrcBlobs {
+	const LibresrcBlob *blobs;
+	size_t count;
+};
+
+/// Use the dark variants of icons that have one (set once at startup)
+void libresrc_set_dark_icons(bool dark);
+bool libresrc_dark_icons();
+
 #include "bitmap.h"
 #include "default_config.h"
 
@@ -47,6 +56,6 @@ wxBitmapBundle libresrc_getbitmapbundle(const LibresrcBlob *images, size_t count
 
 wxIconBundle libresrc_geticonbundle(const LibresrcBlob *images, size_t count);
 
-#define GETBUNDLE(a, h) libresrc_getbitmapbundle(a, sizeof(a) / sizeof(*a), h)
-#define GETBUNDLEDIR(a, h, d) libresrc_getbitmapbundle(a, sizeof(a) / sizeof(*a), h, d)
+#define GETBUNDLE(a, h) libresrc_getbitmapbundle(a##_themed(libresrc_dark_icons()).blobs, a##_themed(libresrc_dark_icons()).count, h)
+#define GETBUNDLEDIR(a, h, d) libresrc_getbitmapbundle(a##_themed(libresrc_dark_icons()).blobs, a##_themed(libresrc_dark_icons()).count, h, d)
 #define GETICONS(a) libresrc_geticonbundle(a, sizeof(a) / sizeof(*a))

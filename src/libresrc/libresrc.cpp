@@ -38,6 +38,13 @@ wxIcon libresrc_geticon(const unsigned char *buff, size_t size) {
 	return icon;
 }
 
+namespace {
+bool dark_icons = false;
+}
+
+void libresrc_set_dark_icons(bool dark) { dark_icons = dark; }
+bool libresrc_dark_icons() { return dark_icons; }
+
 wxBitmapBundle libresrc_getbitmapbundle(const LibresrcBlob *images, size_t count, int height, int dir) {
 	// This function should only ever be called on the GUI thread but declaring this thread_local is the safe way
 	thread_local std::map<std::tuple<const LibresrcBlob *, int, int>, wxBitmapBundle> cache;
