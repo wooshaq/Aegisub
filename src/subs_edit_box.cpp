@@ -54,6 +54,7 @@
 #include "utils.h"
 #include "validators.h"
 
+#include <boost/algorithm/string/replace.hpp>
 #include <libaegisub/character_count.h>
 #include <libaegisub/util.h>
 
@@ -143,8 +144,8 @@ SubsEditBox::SubsEditBox(wxWindow *parent, agi::Context *context)
 	top_sizer->Add(effect_box, 3, wxALIGN_CENTER, 0);
 
 	char_count = new wxTextCtrl(this, -1, "0", wxDefaultPosition, wxDefaultSize, wxTE_READONLY | wxTE_CENTER);
-	char_count->SetInitialSize(char_count->GetSizeFromText(wxS("000")));
-	char_count->SetToolTip(_("Number of characters in the longest line of this subtitle."));
+	char_count->SetInitialSize(char_count->GetSizeFromText(wxS("000 | 000 | 000")));
+	char_count->SetToolTip(_("Number of characters in each line of this subtitle; red when a line is over the limit."));
 	top_sizer->Add(char_count, 0, wxALIGN_CENTER, 0);
 
 	// Middle controls
@@ -642,8 +643,26 @@ void SubsEditBox::UpdateCharacterCount(std::string const& text) {
 		ignore |= agi::IGNORE_WHITESPACE;
 	if (OPT_GET("Subtitle/Character Counter/Ignore Punctuation")->GetBool())
 		ignore |= agi::IGNORE_PUNCTUATION;
-	size_t length = agi::MaxLineLength(text, ignore);
-	char_count->SetValue(std::to_wstring(length));
+	// WsQ: the length of every line ("42 | 38"), not just the longest
+	size_t length = 0;
+	wxString counts;
+	{
+		std::string rest = text;
+		for (auto const& sep : {"\\N", "\\n"})
+			boost::replace_all(rest, sep, "\n");
+		size_t start = 0;
+		while (true) {
+			size_t end = rest.find('\n', start);
+			std::string part = rest.substr(start, end == std::string::npos ? std::string::npos : end - start);
+			size_t n = agi::CharacterCount(part, ignore);
+			length = std::max(length, n);
+			if (!counts.empty()) counts += wxS(" | ");
+			counts += std::to_wstring(n);
+			if (end == std::string::npos) break;
+			start = end + 1;
+		}
+	}
+	char_count->SetValue(counts);
 	size_t limit = (size_t)OPT_GET("Subtitle/Character Limit")->GetInt();
 	if (limit && length > limit)
 		char_count->SetBackgroundColour(to_wx(OPT_GET("Colour/Subtitle/Syntax/Background/Error")->GetColor()));

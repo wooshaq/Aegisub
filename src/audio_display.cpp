@@ -550,6 +550,8 @@ class AudioMarkerInteractionObject final : public AudioDisplayInteractionObject 
 	int start_x;
 	// Pixels the mouse must travel before dragging starts, 0 once it has
 	int drag_threshold;
+	// Did the mouse actually drag (past the threshold)?
+	bool dragged = false;
 
 public:
 	AudioMarkerInteractionObject(std::vector<AudioMarker*> markers, AudioTimingController *timing_controller, AudioDisplay *display, wxMouseButton button_used, int start_x, int drag_threshold)
@@ -576,6 +578,7 @@ public:
 
 		if (event.Dragging())
 		{
+			dragged = true;
 			timing_controller->OnMarkerDrag(
 				markers,
 				display->TimeFromRelativeX(event.GetPosition().x),
@@ -583,7 +586,11 @@ public:
 		}
 
 		// We lose the marker drag if the button used to initiate it goes up
-		return !event.ButtonUp(button_used);
+		if (event.ButtonUp(button_used)) {
+			timing_controller->OnDragEnd(dragged);
+			return false;
+		}
+		return true;
 	}
 
 	/// Get the position in milliseconds of this group of markers
@@ -1052,6 +1059,46 @@ void AudioDisplay::PaintLineInfo(wxDC &dc, TimeRange updtime, wxRect const& updr
 	}
 
 	wxFont font = dc.GetFont();
+
+	// Gaps between consecutive lines: the length in ms, red when shorter
+	// than the minimum gap (a thin red bar when the label doesn't fit)
+	if (OPT_GET("Audio/Display/Draw/Line Gaps")->GetBool()) {
+		std::vector<TimeRange> ranges;
+		for (auto const& line : lines)
+			ranges.push_back(line.range);
+		std::sort(ranges.begin(), ranges.end(), [](TimeRange const& a, TimeRange const& b) { return a.begin() < b.begin(); });
+
+		const int min_gap = OPT_GET("Timing/Minimum Gap")->GetInt();
+		const wxColour ok_colour = to_wx(OPT_GET("Colour/Audio Display/Line Info")->GetColor());
+		const wxColour bad_colour = to_wx(OPT_GET("Colour/Audio Display/Line Info Warning")->GetColor());
+		wxFont small = font;
+		small.SetPointSize(std::max(6, font.GetPointSize() - 1));
+		dc.SetFont(small);
+
+		int furthest_end = INT_MIN;
+		for (size_t i = 0; i + 1 < ranges.size(); ++i) {
+			furthest_end = std::max(furthest_end, ranges[i].end());
+			const int gap = ranges[i + 1].begin() - furthest_end;
+			if (gap <= 0 || gap >= 1000) continue;
+
+			const int x1 = RelativeXFromTime(furthest_end);
+			const int x2 = RelativeXFromTime(ranges[i + 1].begin());
+			const bool too_small = gap < min_gap;
+			wxString label = wxString::Format(wxS("%d"), gap);
+			wxSize ext = dc.GetTextExtent(label);
+			if (x2 - x1 >= ext.GetWidth() + 4) {
+				dc.SetTextForeground(too_small ? bad_colour : ok_colour);
+				dc.DrawText(label, x1 + (x2 - x1 - ext.GetWidth()) / 2, audio_top + audio_height - ext.GetHeight() - 3);
+			}
+			else if (too_small) {
+				dc.SetBrush(wxBrush(bad_colour));
+				dc.DrawRectangle(x1, audio_top + audio_height - 6, std::max(2, x2 - x1), 4);
+				dc.SetBrush(*wxTRANSPARENT_BRUSH);
+			}
+		}
+		dc.SetFont(font);
+	}
+
 	const wxColour text_active = to_wx(OPT_GET("Colour/Audio Display/Line Text")->GetColor());
 	const wxColour text_inactive = to_wx(OPT_GET("Colour/Audio Display/Line Text Inactive")->GetColor());
 	const wxColour info_colour = to_wx(OPT_GET("Colour/Audio Display/Line Info")->GetColor());
@@ -1284,7 +1331,7 @@ void AudioDisplay::OnMouseEvent(wxMouseEvent& event)
 		if (markers.size())
 		{
 			RemoveTrackCursor();
-			const int drag_threshold = event.LeftDown() && timing->IsMovingLines() ? 3 : 0;
+			const int drag_threshold = event.LeftDown() && timing->WantsDragThreshold() ? 3 : 0;
 			audio_marker = std::make_unique<AudioMarkerInteractionObject>(markers, timing, this, (wxMouseButton)event.GetButton(), mouse_x, drag_threshold);
 			if (drag_threshold)
 				SetCursor(wxCursor(wxCURSOR_HAND));

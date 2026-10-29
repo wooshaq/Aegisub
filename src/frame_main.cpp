@@ -251,6 +251,11 @@ void FrameMain::SetDisplayMode(int video, int audio) {
 
 	TopSizer->Show(videoBox, showVideo, true);
 	ToolsSizer->Show(audioBox, showAudio, true);
+	// WsQ: spare height (e.g. next to a tall video) goes to the waveform
+	// rather than to an oversized text box
+	if (auto item = ToolsSizer->GetItem(audioBox)) item->SetProportion(showAudio ? 1 : 0);
+	// The edit box is the second item of ToolsSizer (see InitContents)
+	if (auto item = ToolsSizer->GetItem((size_t)1)) item->SetProportion(showAudio ? 0 : 1);
 
 	MainSizer->Layout();
 	Layout();

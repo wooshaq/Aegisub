@@ -81,6 +81,13 @@ BaseGrid::BaseGrid(wxWindow* parent, agi::Context *context)
 
 	SetBackgroundStyle(wxBG_STYLE_PAINT);
 
+	// WsQ: the Duration column was added after End; keep saved column
+	// visibility lined up for the columns after it
+	if (columns_visible.size() == columns.size() - 1 && columns_visible.size() > 4) {
+		columns_visible.insert(columns_visible.begin() + 4, true);
+		OPT_SET("Subtitle/Grid/Column")->SetListBool(std::vector<bool>(columns_visible));
+	}
+
 	for (size_t i : agi::util::range(std::min(columns_visible.size(), columns.size()))) {
 		if (!columns_visible[i])
 			columns[i]->SetVisible(false);
@@ -387,6 +394,25 @@ void BaseGrid::OnPaint(wxPaintEvent &) {
 		if (color != row_colors.Default) {
 			dc.SetPen(*wxTRANSPARENT_PEN);
 			dc.DrawRectangle(grid_x, (i + 1) * lineHeight + 1, w, lineHeight);
+		}
+
+		// WsQ: a stripe on the left of lines that overlap the previous or next
+		// line in the file (comments ignored)
+		if (!curDiag->Comment) {
+			const int row = i + yPos;
+			auto neighbour = [&](int dir) -> AssDialogue* {
+				for (int r = row + dir; r >= 0 && r < (int)index_line_map.size(); r += dir) {
+					if (!index_line_map[r]->Comment) return index_line_map[r];
+				}
+				return nullptr;
+			};
+			AssDialogue *prev = neighbour(-1), *next = neighbour(1);
+			if ((prev && prev->End > curDiag->Start) || (next && curDiag->End > next->Start)) {
+				dc.SetPen(*wxTRANSPARENT_PEN);
+				dc.SetBrush(wxBrush(text_collision));
+				dc.DrawRectangle(grid_x, (i + 1) * lineHeight + 1, 4, lineHeight);
+				dc.SetBrush(color);
+			}
 		}
 
 		if (active_line != curDiag && curDiag->CollidesWith(active_line))

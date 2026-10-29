@@ -185,6 +185,24 @@ struct GridColumnEndTime final : GridColumnTime {
 	}
 };
 
+// WsQ: duration of the line, in seconds or frames
+struct GridColumnDuration final : GridColumnTime {
+	COLUMN_HEADER(_("Duration"))
+	COLUMN_DESCRIPTION(_("Duration"))
+
+	wxString Value(const AssDialogue *d, const agi::Context *c) const override {
+		if (by_frame)
+			return std::to_wstring(c->videoController->FrameAtTime(d->End, agi::vfr::END)
+				- c->videoController->FrameAtTime(d->Start, agi::vfr::START) + 1);
+		int ms = std::max(0, d->End - d->Start);
+		return wxString::Format(wxS("%d.%02d"), ms / 1000, (ms % 1000) / 10);
+	}
+
+	int Width(const agi::Context *, WidthHelper &helper) const override {
+		return helper(wxS("00.00"));
+	}
+};
+
 template<typename T>
 int max_width(T AssDialogueBase::*field, EntryList<AssDialogue> const& lines, WidthHelper &helper) {
 	int w = 0;
@@ -414,6 +432,7 @@ std::vector<std::unique_ptr<GridColumn>> GetGridColumns() {
 	ret.push_back(make<GridColumnLayer>());
 	ret.push_back(make<GridColumnStartTime>());
 	ret.push_back(make<GridColumnEndTime>());
+	ret.push_back(make<GridColumnDuration>());
 	ret.push_back(make<GridColumnCPS>());
 	ret.push_back(make<GridColumnStyle>());
 	ret.push_back(make<GridColumnActor>());

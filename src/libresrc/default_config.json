@@ -52,6 +52,7 @@
 				"Inactive Comments" : false,
 				"Keyframes in Dialogue Mode" : true,
 				"Keyframes in Karaoke Mode" : true,
+				"Line Gaps" : true,
 				"Line Text" : true,
 				"Seconds" : true,
 				"Video Position" : true
@@ -504,6 +505,7 @@
 	},
 
 	"Timing" : {
+		"Minimum Gap" : 83,
 		"Default Duration" : 3000
 	},
 

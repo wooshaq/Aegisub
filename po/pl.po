@@ -7265,3 +7265,83 @@ msgstr "usuń puste/reklamowe linie z końca"
 
 msgid "Press a key combination or mouse button 4/5"
 msgstr "Naciśnij kombinację klawiszy albo przycisk myszy 4/5"
+
+#: WsQ
+msgid "Ad line background"
+msgstr "Tło linii z reklamą"
+
+#: WsQ
+msgid "Appearance"
+msgstr "Wygląd"
+
+#: WsQ
+msgid "Dark theme"
+msgstr "Ciemny motyw"
+
+#: WsQ
+msgid "Drag whole lines on the waveform"
+msgstr "Przeciąganie całych linii na wykresie audio"
+
+#: WsQ
+msgid "Duration"
+msgstr "Długość"
+
+#: WsQ
+msgid "Gaps between lines"
+msgstr "Odstępy między liniami"
+
+#: WsQ
+msgid "Inactive line text"
+msgstr "Tekst nieaktywnej linii"
+
+#: WsQ
+msgid "Insert Line Break"
+msgstr "Wstaw podział linii"
+
+#: WsQ
+msgid "Insert a hard line break (\\N) at the cursor position"
+msgstr "Wstaw twardy podział linii (\\N) w miejscu kursora"
+
+#: WsQ
+msgid "Line info"
+msgstr "Informacje o linii"
+
+#: WsQ
+msgid "Line info over CPS limit"
+msgstr "Informacje o linii powyżej limitu CPS"
+
+#: WsQ
+msgid "Line text"
+msgstr "Tekst linii"
+
+#: WsQ
+msgid "Line text and info"
+msgstr "Tekst i informacje o liniach"
+
+#: WsQ
+msgid "Minimum gap between lines (ms)"
+msgstr "Minimalny odstęp między liniami (ms)"
+
+#: WsQ
+msgid "Number of characters in each line of this subtitle; red when a line is over the limit."
+msgstr "Liczba znaków w każdej linii tego napisu; na czerwono, gdy linia przekracza limit."
+
+#: WsQ
+msgid "Overlapping lines"
+msgstr "Nakładające się linie"
+
+#: WsQ
+msgid "Selected ad line background"
+msgstr "Tło zaznaczonej linii z reklamą"
+
+#: WsQ
+msgid "The colours have been changed. Restart Aegisub to also switch the menus, buttons and dialogs."
+msgstr "Kolory zostały zmienione. Uruchom Aegisub ponownie, aby przełączyć także menu, przyciski i okna dialogowe."
+
+#: WsQ
+msgid "Theme"
+msgstr "Motyw"
+
+#: WsQ
+msgid "new line"
+msgstr "nowa linia"

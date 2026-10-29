@@ -173,6 +173,7 @@ void Audio(wxTreebook *book, Preferences *parent) {
 	p->OptionAdd(general, _("Drag whole lines on the waveform"), "Audio/Drag Lines");
 	p->CellSkip(general);
 	p->OptionAdd(general, _("Default timing length (ms)"), "Timing/Default Duration", {.min = 0, .max = 36000});
+	p->OptionAdd(general, _("Minimum gap between lines (ms)"), "Timing/Minimum Gap", {.min = 0, .max = 5000});
 	p->OptionAdd(general, _("Default lead-in length (ms)"), "Audio/Lead/IN", {.min = 0, .max = 36000});
 	p->OptionAdd(general, _("Default lead-out length (ms)"), "Audio/Lead/OUT", {.min = 0, .max = 36000});
 
@@ -193,6 +194,8 @@ void Audio(wxTreebook *book, Preferences *parent) {
 	p->OptionAdd(display, _("Video position"), "Audio/Display/Draw/Video Position");
 	p->OptionAdd(display, _("Seconds boundaries"), "Audio/Display/Draw/Seconds");
 	p->OptionAdd(display, _("Line text and info"), "Audio/Display/Draw/Line Text");
+	p->OptionAdd(display, _("Gaps between lines"), "Audio/Display/Draw/Line Gaps");
+	p->CellSkip(display);
 	p->OptionChoice(display, _("Waveform Style"), AudioWaveformRenderer::GetWaveformStyles(), "Audio/Display/Waveform Style");
 
 	auto label = p->PageSizer(_("Audio labels"));

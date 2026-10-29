@@ -184,6 +184,14 @@ public:
 	/// so that a plain click on a line never nudges its times.
 	virtual bool IsMovingLines() const { return false; }
 
+	/// @brief Should the drag started by the last OnLeftClick wait for the
+	///        mouse to travel a few pixels before anything changes?
+	virtual bool WantsDragThreshold() const { return IsMovingLines(); }
+
+	/// @brief The mouse button that started a marker drag went up
+	/// @param dragged Was the drag threshold crossed (or was there no threshold)?
+	virtual void OnDragEnd(bool) { }
+
 	/// @brief The user pressed the left mouse button on the audio
 	/// @param ms          The time in milliseconds the user clicked
 	/// @param ctrl_down   Is the user currently holding the ctrl key down?
