@@ -1071,9 +1071,9 @@ void AudioDisplay::PaintLineInfo(wxDC &dc, TimeRange updtime, wxRect const& updr
 		const int min_gap = OPT_GET("Timing/Minimum Gap")->GetInt();
 		const wxColour ok_colour = to_wx(OPT_GET("Colour/Audio Display/Line Info")->GetColor());
 		const wxColour bad_colour = to_wx(OPT_GET("Colour/Audio Display/Line Info Warning")->GetColor());
-		wxFont small = font;
-		small.SetPointSize(std::max(6, font.GetPointSize() - 1));
-		dc.SetFont(small);
+		wxFont gap_font = font;
+		gap_font.SetPointSize(std::max(6, font.GetPointSize() - 1));
+		dc.SetFont(gap_font);
 
 		int furthest_end = INT_MIN;
 		for (size_t i = 0; i + 1 < ranges.size(); ++i) {
