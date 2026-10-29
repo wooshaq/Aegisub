@@ -19,6 +19,7 @@
 
 class wxColour;
 class wxFont;
+class wxTopLevelWindow;
 
 namespace theme {
 /// Apply the colour palette for the selected theme if it isn't yet, switch
@@ -28,6 +29,14 @@ void Init();
 
 /// Is the dark theme selected?
 bool IsDark();
+
+/// Show a top level window without the white flash Windows paints before
+/// the window has drawn itself (the window is hidden from the screen until
+/// it has had a moment to paint)
+void ShowWithoutFlash(wxTopLevelWindow *window);
+
+/// Windows 11: rounded corners and a dark border for a borderless popup
+void StyleDialogFrame(wxTopLevelWindow *window);
 
 /// Monospace font of the same size as base, for times and numbers
 wxFont MonoFont(wxFont const& base);

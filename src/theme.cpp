@@ -25,11 +25,22 @@
 #include <algorithm>
 
 #include <wx/app.h>
+#include <wx/dcclient.h>
+#include <wx/timer.h>
+#include <wx/toplevel.h>
 #include <wx/font.h>
 #include <wx/settings.h>
 #include <wx/intl.h>
 #include <wx/msgdlg.h>
 #include <wx/version.h>
+
+#ifdef __WXMSW__
+#include <wx/msw/wrapwin.h>
+#if wxCHECK_VERSION(3, 3, 0)
+#include <wx/pen.h>
+#include <wx/msw/darkmode.h>
+#endif
+#endif
 
 namespace {
 struct ThemeColour {
@@ -84,6 +95,72 @@ const ThemeColour palette[] = {
 };
 
 agi::signal::Connection theme_connection;
+
+#if defined(__WXMSW__) && wxCHECK_VERSION(3, 3, 0)
+/// The colours wx uses for native controls, dialogs and the menu bar in
+/// dark mode: the WsQ Dark palette instead of Windows' plain greys
+class WsQDarkModeSettings final : public wxDarkModeSettings {
+public:
+	wxColour GetColour(wxSystemColour index) override {
+		switch (index) {
+			case wxSYS_COLOUR_BTNFACE:
+			case wxSYS_COLOUR_APPWORKSPACE:
+				return theme::Window();
+			case wxSYS_COLOUR_WINDOW:
+			case wxSYS_COLOUR_LISTBOX:
+			case wxSYS_COLOUR_INFOBK:
+				return theme::Field();
+			case wxSYS_COLOUR_MENU:
+				return theme::Bar();
+			case wxSYS_COLOUR_WINDOWTEXT:
+			case wxSYS_COLOUR_BTNTEXT:
+			case wxSYS_COLOUR_LISTBOXTEXT:
+			case wxSYS_COLOUR_MENUTEXT:
+				return theme::Text();
+			case wxSYS_COLOUR_GRAYTEXT:
+				return theme::TextDim();
+			default:
+				return wxDarkModeSettings::GetColour(index);
+		}
+	}
+
+	wxColour GetMenuColour(wxMenuColour which) override {
+		switch (which) {
+			case wxMenuColour::StandardFg: return theme::Text();
+			case wxMenuColour::StandardBg: return theme::Bar();
+			case wxMenuColour::DisabledFg: return wxColour(110, 118, 129);
+			case wxMenuColour::HotBg:      return theme::Field();
+		}
+		return wxDarkModeSettings::GetMenuColour(which);
+	}
+
+	wxPen GetBorderPen() override {
+		return wxPen(theme::FieldBorder());
+	}
+};
+#endif
+
+#ifdef __WXMSW__
+using DwmSetWindowAttributeFn = HRESULT (WINAPI *)(HWND, DWORD, LPCVOID, DWORD);
+
+DwmSetWindowAttributeFn DwmSetAttribute() {
+	// Loaded at run time so that nothing extra has to be linked
+	static DwmSetWindowAttributeFn fn = [] {
+		HMODULE dwm = ::LoadLibraryW(L"dwmapi.dll");
+		return dwm ? reinterpret_cast<DwmSetWindowAttributeFn>(::GetProcAddress(dwm, "DwmSetWindowAttribute")) : nullptr;
+	}();
+	return fn;
+}
+
+const DWORD DWMWA_CLOAK_ = 13;
+const DWORD DWMWA_WINDOW_CORNER_PREFERENCE_ = 33;
+const DWORD DWMWA_BORDER_COLOR_ = 34;
+
+bool SetCloak(wxTopLevelWindow *window, BOOL cloak) {
+	auto fn = DwmSetAttribute();
+	return fn && SUCCEEDED(fn(static_cast<HWND>(window->GetHWND()), DWMWA_CLOAK_, &cloak, sizeof(cloak)));
+}
+#endif
 
 // The "WsQ Blue" waveform scheme: near-neutral dark background (lighter
 // inside lines, blue inside the active line), blue waveform. Set here too
@@ -148,7 +225,7 @@ void Init() {
 	// window is created, so changing it takes a restart.
 #if defined(__WXMSW__) && wxCHECK_VERSION(3, 3, 0)
 	if (dark)
-		wxTheApp->MSWEnableDarkMode(wxApp::DarkMode_Always);
+		wxTheApp->MSWEnableDarkMode(wxApp::DarkMode_Always, new WsQDarkModeSettings);
 #elif wxCHECK_VERSION(3, 3, 0)
 	if (dark)
 		wxTheApp->SetAppearance(wxApp::Appearance::Dark);
@@ -161,6 +238,37 @@ void Init() {
 
 bool IsDark() {
 	return OPT_GET("App/Dark Theme")->GetBool();
+}
+
+void ShowWithoutFlash(wxTopLevelWindow *window) {
+#ifdef __WXMSW__
+	if (IsDark() && SetCloak(window, TRUE)) {
+		window->Show();
+		// Uncover it once everything had a chance to paint. A timer rather
+		// than a paint event so that it can never stay hidden.
+		// Never deleted: a static wxTimer would be destroyed after wx shuts down
+		auto timer = new wxTimer;
+		timer->Bind(wxEVT_TIMER, [window](wxTimerEvent&) {
+			window->Update();
+			SetCloak(window, FALSE);
+		});
+		timer->StartOnce(200);
+		return;
+	}
+#endif
+	window->Show();
+}
+
+void StyleDialogFrame([[maybe_unused]] wxTopLevelWindow *window) {
+#ifdef __WXMSW__
+	if (auto fn = DwmSetAttribute()) {
+		DWORD round = 2; // DWMWCP_ROUND
+		fn(static_cast<HWND>(window->GetHWND()), DWMWA_WINDOW_CORNER_PREFERENCE_, &round, sizeof(round));
+		wxColour border = Border();
+		COLORREF colour = RGB(border.Red(), border.Green(), border.Blue());
+		fn(static_cast<HWND>(window->GetHWND()), DWMWA_BORDER_COLOR_, &colour, sizeof(colour));
+	}
+#endif
 }
 
 wxFont MonoFont(wxFont const& base) {

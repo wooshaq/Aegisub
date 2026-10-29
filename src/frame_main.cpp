@@ -104,6 +104,7 @@ FrameMain::FrameMain()
 	StartupLog("Entering FrameMain constructor");
 
 	SetSize(FromDIP(wxSize(920, 700)));
+	if (theme::IsDark()) SetBackgroundColour(theme::Window());
 
 #ifdef __WXGTK__
 	// XXX HACK XXX
@@ -173,7 +174,8 @@ FrameMain::FrameMain()
 
 	StartupLog("Display main window");
 	AddFullScreenButton(this);
-	Show();
+	// WsQ: no white flash before the dark window has painted
+	theme::ShowWithoutFlash(this);
 	SetDisplayMode(1, 1);
 
 	StartupLog("Leaving FrameMain constructor");

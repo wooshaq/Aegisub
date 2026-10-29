@@ -60,7 +60,7 @@ enum {
 };
 
 AudioBox::AudioBox(wxWindow *parent, agi::Context *context)
-: wxSashWindow(parent, -1, wxDefaultPosition, wxDefaultSize, wxSW_3D | wxCLIP_CHILDREN)
+: wxSashWindow(parent, -1, wxDefaultPosition, wxDefaultSize, (theme::IsDark() ? 0 : wxSW_3D) | wxCLIP_CHILDREN)
 , controller(context->audioController.get())
 , context(context)
 , audio_open_connection(context->audioController->AddAudioPlayerOpenListener(&AudioBox::OnAudioOpen, this))

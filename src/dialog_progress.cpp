@@ -257,7 +257,7 @@ public:
 };
 
 DialogProgress::DialogProgress(wxWindow *parent, wxString const& title_text, wxString const& message)
-: wxDialog(parent, -1, title_text, wxDefaultPosition, wxDefaultSize, wxBORDER_RAISED)
+: wxDialog(parent, -1, title_text, wxDefaultPosition, wxDefaultSize, theme::IsDark() ? wxBORDER_NONE : wxBORDER_RAISED)
 , pulse_timer(GetEventHandler())
 {
 	title = new wxStaticText(this, -1, title_text, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE | wxST_NO_AUTORESIZE);
@@ -283,6 +283,21 @@ DialogProgress::DialogProgress(wxWindow *parent, wxString const& title_text, wxS
 
 	SetSizerAndFit(sizer);
 	CenterOnParent();
+
+	// WsQ Dark: a flat dark popup with a thin border instead of the white
+	// raised frame (rounded by Windows 11 itself)
+	if (theme::IsDark()) {
+		SetBackgroundColour(theme::Bar());
+		for (wxWindow *child : {static_cast<wxWindow*>(title), static_cast<wxWindow*>(text)})
+			child->SetForegroundColour(theme::Text());
+		Bind(wxEVT_PAINT, [this](wxPaintEvent&) {
+			wxPaintDC dc(this);
+			dc.SetPen(wxPen(theme::Border()));
+			dc.SetBrush(*wxTRANSPARENT_BRUSH);
+			dc.DrawRectangle(GetClientRect());
+		});
+		theme::StyleDialogFrame(this);
+	}
 
 	Bind(wxEVT_SHOW, &DialogProgress::OnShow, this);
 	Bind(wxEVT_TIMER, [this](wxTimerEvent&) { gauge->Pulse(); });
