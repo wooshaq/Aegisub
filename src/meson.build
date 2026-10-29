@@ -89,6 +89,7 @@ aegisub_src = files(
     'export_framerate.cpp',
     'fft.cpp',
     'font_file_lister.cpp',
+    'flat_button.cpp',
     'frame_main.cpp',
     'gl_text.cpp',
     'gl_wrap.cpp',

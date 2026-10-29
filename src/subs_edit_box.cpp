@@ -34,6 +34,8 @@
 
 #include "subs_edit_box.h"
 
+#include "flat_button.h"
+
 #include "ass_dialogue.h"
 #include "ass_file.h"
 #include "base_grid.h"
@@ -122,8 +124,7 @@ SubsEditBox::SubsEditBox(wxWindow *parent, agi::Context *context)
 
 	style_box = MakeComboBox("Default", wxCB_READONLY, &SubsEditBox::OnStyleChange, _("Style for this line"));
 
-	style_edit_button = new wxButton(this, -1, _("Edit"), wxDefaultPosition,
-		wxSize(GetTextExtent(_("Edit")).GetWidth() + 20, -1));
+	style_edit_button = new FlatButton(this, _("Edit"));
 	style_edit_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
 		if (active_style) {
 			wxArrayString font_list = wxFontEnumerator::GetFacenames();
@@ -282,21 +283,17 @@ TimeEdit *SubsEditBox::MakeTimeCtrl(wxString const& tooltip, TimeField field) {
 
 void SubsEditBox::MakeButton(const char *cmd_name) {
 	cmd::Command *command = cmd::get(cmd_name);
-	wxBitmapButton *btn = new wxBitmapButton(this, -1, command->Icon());
-	// wxWidgets 3.3 draws bitmap buttons without padding; keep them as large
-	// as they were so they stay easy to click
-	wxSize min_size = btn->GetBestSize();
-	min_size.IncTo(FromDIP(wxSize(26, 26)));
-	btn->SetMinSize(min_size);
+	// WsQ: drawn by Aegisub, the same on every platform
+	auto btn = new FlatButton(this, command->Icon());
 	tool_tip_bindings.emplace_back(btn, command->StrHelp(), "Subtitle Edit Box", cmd_name);
 
 	middle_right_sizer->Add(btn, wxSizerFlags().Expand());
 	btn->Bind(wxEVT_BUTTON, std::bind(&SubsEditBox::CallCommand, this, cmd_name));
 }
 
-wxButton *SubsEditBox::MakeBottomButton(const char *cmd_name) {
+wxWindow *SubsEditBox::MakeBottomButton(const char *cmd_name) {
 	cmd::Command *command = cmd::get(cmd_name);
-	wxButton *btn = new wxButton(this, -1, command->StrDisplay(c));
+	auto btn = new FlatButton(this, command->StrDisplay(c));
 	tool_tip_bindings.emplace_back(btn, command->StrHelp(), "Subtitle Edit Box", cmd_name);
 
 	btn->Bind(wxEVT_BUTTON, std::bind(&SubsEditBox::CallCommand, this, cmd_name));

@@ -91,7 +91,7 @@ class SubsEditBox final : public wxPanel {
 	// Box controls
 	wxCheckBox *comment_box;
 	wxComboBox *style_box;
-	wxButton *style_edit_button;
+	wxWindow *style_edit_button;
 	Placeholder<wxComboBox> *actor_box;
 	TimeEdit *start_time;
 	TimeEdit *end_time;
@@ -139,7 +139,7 @@ class SubsEditBox final : public wxPanel {
 	wxTextCtrl *MakeMarginCtrl(wxString const& tooltip, int margin, wxString const& commit_msg);
 	TimeEdit *MakeTimeCtrl(wxString const& tooltip, TimeField field);
 	void MakeButton(const char *cmd_name);
-	wxButton *MakeBottomButton(const char *cmd_name);
+	wxWindow *MakeBottomButton(const char *cmd_name);
 	wxComboBox *MakeComboBox(wxString const& initial_text, int style, void (SubsEditBox::*handler)(wxCommandEvent&), wxString const& tooltip);
 	wxRadioButton *MakeRadio(wxString const& text, bool start, wxString const& tooltip);
 

@@ -33,6 +33,9 @@
 
 #include "frame_main.h"
 
+#include "flat_button.h"
+#include "theme.h"
+
 #include "include/aegisub/context.h"
 #include "include/aegisub/menu.h"
 #include "include/aegisub/toolbar.h"
@@ -196,6 +199,10 @@ void FrameMain::EnableToolBar(agi::OptionValue const& opt) {
 void FrameMain::InitContents() {
 	StartupLog("Create background panel");
 	auto Panel = new wxPanel(this, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | wxCLIP_CHILDREN);
+	// WsQ: one background colour for all panels, matching the flat buttons
+	// (set before the children are created so the panels inherit it)
+	if (theme::IsDark())
+		Panel->SetBackgroundColour(FlatButton::PanelColour());
 
 	StartupLog("Create subtitles grid");
 	context->subsGrid = new BaseGrid(Panel, context.get());

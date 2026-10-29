@@ -20,6 +20,7 @@
 
 #include "command/command.h"
 #include "compat.h"
+#include "flat_button.h"
 #include "include/aegisub/hotkey.h"
 #include "libresrc/libresrc.h"
 #include "options.h"
@@ -211,8 +212,8 @@ namespace {
 	class ButtonBar final : public wxPanel {
 		struct Button {
 			cmd::Command *command;
-			wxAnyButton *button;
-			wxBitmapToggleButton *toggle; ///< Same as button for toggles, else null
+			FlatButton *button;
+			FlatButton *toggle; ///< Same as button for toggles, else null
 		};
 
 		std::string name;
@@ -294,12 +295,11 @@ namespace {
 					continue;
 				}
 
-				wxAnyButton *button;
-				wxBitmapToggleButton *toggle = nullptr;
+				FlatButton *toggle = nullptr;
+				FlatButton *button = new FlatButton(this, command->Icon(icon_size),
+					command->Type() & (cmd::COMMAND_TOGGLE | cmd::COMMAND_RADIO));
 				if (command->Type() & (cmd::COMMAND_TOGGLE | cmd::COMMAND_RADIO))
-					button = toggle = new wxBitmapToggleButton(this, -1, command->Icon(icon_size));
-				else
-					button = new wxBitmapButton(this, -1, command->Icon(icon_size));
+					toggle = button;
 				// At least as large as the edit box buttons; larger only if the
 				// platform's button padding needs it, so the icon is never clipped
 				wxSize size = button->GetBestSize();
