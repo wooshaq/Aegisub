@@ -20,8 +20,10 @@
 #include "theme.h"
 
 #include <memory>
+#include <unordered_map>
 
 #include <wx/dcbuffer.h>
+#include <wx/sizer.h>
 #include <wx/graphics.h>
 #include <wx/tglbtn.h>
 
@@ -45,7 +47,74 @@ Palette const& palette() {
 }
 
 wxColour FlatButton::PanelColour() {
-	return theme::IsDark() ? wxColour(53, 53, 53) : wxColour(246, 245, 244);
+	return theme::IsDark() ? theme::Window() : wxColour(246, 245, 244);
+}
+
+namespace {
+// Fields framed by their card, and the frame colour of each
+std::unordered_map<wxWindow*, wxColour> framed_fields;
+
+void DrawCard(wxWindow *card, wxAutoBufferedPaintDC &dc) {
+	wxWindow *parent = card->GetParent();
+	dc.SetBackground(wxBrush(parent && parent->UseBgCol() ? parent->GetBackgroundColour() : theme::Window()));
+	dc.Clear();
+
+	std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create(dc));
+	if (!gc) return;
+	const wxSize size = card->GetClientSize();
+	gc->SetBrush(wxBrush(card->GetBackgroundColour()));
+	gc->SetPen(wxPen(theme::Border(), 1));
+	gc->DrawRoundedRectangle(0.5, 0.5, size.GetWidth() - 1, size.GetHeight() - 1, card->FromDIP(6));
+
+	// Rounded frames around the borderless fields
+	const int fx = card->FromDIP(4), fy = card->FromDIP(3);
+	for (wxWindow *child : card->GetChildren()) {
+		auto it = framed_fields.find(child);
+		if (it == framed_fields.end() || !child->IsShown()) continue;
+		wxRect r = child->GetRect().Inflate(fx, fy);
+		gc->SetBrush(wxBrush(child->GetBackgroundColour()));
+		gc->SetPen(wxPen(it->second.IsOk() ? it->second : theme::FieldBorder(), 1));
+		gc->DrawRoundedRectangle(r.x + 0.5, r.y + 0.5, r.width - 1, r.height - 1, card->FromDIP(5));
+	}
+}
+}
+
+namespace theme {
+void MakeCard(wxWindow *card, int inset) {
+	if (!IsDark()) return;
+	card->SetBackgroundStyle(wxBG_STYLE_PAINT);
+	card->SetBackgroundColour(Bar());
+	card->Bind(wxEVT_PAINT, [card](wxPaintEvent&) {
+		wxAutoBufferedPaintDC dc(card);
+		DrawCard(card, dc);
+	});
+	card->Bind(wxEVT_SIZE, [card](wxSizeEvent& e) { card->Refresh(false); e.Skip(); });
+
+	if (wxSizer *inner = card->GetSizer()) {
+		auto outer = new wxBoxSizer(wxVERTICAL);
+		outer->Add(inner, 1, wxEXPAND | wxALL, card->FromDIP(inset));
+		card->SetSizer(outer, false);
+	}
+}
+
+void FrameField(wxWindow *field, wxColour const& border) {
+	if (!IsDark()) return;
+	framed_fields[field] = border;
+	field->Bind(wxEVT_DESTROY, [field](wxWindowDestroyEvent& e) {
+		if (e.GetEventObject() == field) framed_fields.erase(field);
+		e.Skip();
+	});
+	// Repaint the frame when the field moves or is shown
+	field->Bind(wxEVT_SIZE, [field](wxSizeEvent& e) { if (field->GetParent()) field->GetParent()->Refresh(false); e.Skip(); });
+	field->Bind(wxEVT_SHOW, [field](wxShowEvent& e) { if (field->GetParent()) field->GetParent()->Refresh(false); e.Skip(); });
+
+	if (wxSizer *sizer = field->GetContainingSizer()) {
+		if (wxSizerItem *item = sizer->GetItem(field)) {
+			item->SetFlag((item->GetFlag() & ~wxALL) | wxALL);
+			item->SetBorder(std::max(item->GetBorder(), field->FromDIP(5)));
+		}
+	}
+}
 }
 
 FlatButton::FlatButton(wxWindow *parent, wxString const& label)
@@ -124,7 +193,8 @@ void FlatButton::OnPaint(wxPaintEvent&) {
 	wxAutoBufferedPaintDC dc(this);
 	// The panels get PanelColour() in the dark theme; reading the parent's
 	// colour is not reliable for windows that only inherit it
-	dc.SetBackground(wxBrush(theme::IsDark() ? PanelColour() : GetParent()->GetBackgroundColour()));
+	wxWindow *parent = GetParent();
+	dc.SetBackground(wxBrush(parent->UseBgCol() ? parent->GetBackgroundColour() : PanelColour()));
 	dc.Clear();
 
 	std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create(dc));
@@ -136,8 +206,22 @@ void FlatButton::OnPaint(wxPaintEvent&) {
 	const double r = FromDIP(5);
 	const bool down = (pressed && hover) || value;
 
+	if (theme::IsDark()) {
+		// WsQ Dark: flat fills like the "Timing (SE)" mockup
+		wxColour fill = theme::Field(), border = look == Look::Framed ? theme::FieldBorder() : wxColour();
+		if (value) { fill = wxColour(29, 53, 87); border = wxColour(47, 95, 168); }
+		else if (pressed && hover) fill = wxColour(35, 38, 43);
+		else if (hover && IsEnabled()) fill = wxColour(54, 59, 66);
+		// Toolbar tiles are bare icons until hovered, pressed or switched on
+		const bool bare = look == Look::Tile && !value && !hover;
+		if (!bare) {
+			gc->SetBrush(wxBrush(fill));
+			gc->SetPen(border.IsOk() ? wxPen(border, 1) : *wxTRANSPARENT_PEN);
+			gc->DrawRoundedRectangle(0.5, 0.5, w - 1, h - 1, r);
+		}
+	}
 	// Body: a soft vertical gradient, flat and darker when pressed or on
-	if (down) {
+	else if (down) {
 		gc->SetBrush(wxBrush(p.down));
 	}
 	else {
@@ -145,17 +229,19 @@ void FlatButton::OnPaint(wxPaintEvent&) {
 		wxColour bottom = hover && IsEnabled() ? p.hover_bottom : p.bottom;
 		gc->SetBrush(gc->CreateLinearGradientBrush(0, 0, 0, h, top, bottom));
 	}
-	gc->SetPen(wxPen(p.border, 1));
-	gc->DrawRoundedRectangle(0.5, 0.5, w - 1, h - 1, r);
+	if (!theme::IsDark()) {
+		gc->SetPen(wxPen(p.border, 1));
+		gc->DrawRoundedRectangle(0.5, 0.5, w - 1, h - 1, r);
+	}
 
 	// One-pixel highlight just inside the top edge, like Adwaita
-	if (!down) {
+	if (!down && !theme::IsDark()) {
 		gc->SetPen(wxPen(p.highlight, 1));
 		gc->StrokeLine(r, 1.5, w - r, 1.5);
 	}
 
 	if (!label.empty()) {
-		wxColour text = theme::IsDark() ? wxColour(238, 238, 236) : wxColour(46, 52, 54);
+		wxColour text = theme::IsDark() ? theme::Text() : wxColour(46, 52, 54);
 		if (!IsEnabled()) text = theme::IsDark() ? wxColour(120, 120, 120) : wxColour(160, 160, 160);
 		dc.SetFont(GetFont());
 		dc.SetTextForeground(text);

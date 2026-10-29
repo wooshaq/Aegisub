@@ -21,6 +21,7 @@
 #include "compat.h"
 #include "include/aegisub/context.h"
 #include "options.h"
+#include "theme.h"
 #include "video_controller.h"
 
 #include <libaegisub/character_count.h>
@@ -147,11 +148,37 @@ struct GridColumnTime : GridColumn {
 
 	bool Centered() const override { return true; }
 	void SetByFrame(bool by_frame) override { this->by_frame = by_frame; }
+
+	// WsQ: times in a monospace font in the dark layout
+	void UpdateWidth(const agi::Context *c, WidthHelper &helper) override {
+		if (!theme::IsDark() || !helper.GetDC()) return GridColumn::UpdateWidth(c, helper);
+		wxFont old = helper.GetDC()->GetFont();
+		helper.GetDC()->SetFont(theme::MonoFont(old));
+		GridColumn::UpdateWidth(c, helper);
+		helper.GetDC()->SetFont(old);
+	}
+
+	void Paint(wxDC &dc, int x, int y, const AssDialogue *d, const agi::Context *c) const override {
+		if (!theme::IsDark()) return GridColumn::Paint(dc, x, y, d, c);
+		wxFont old = dc.GetFont();
+		dc.SetFont(theme::MonoFont(old));
+		GridColumn::Paint(dc, x, y, d, c);
+		dc.SetFont(old);
+	}
 };
 
 struct GridColumnStartTime final : GridColumnTime {
 	COLUMN_HEADER(_("Start"))
 	COLUMN_DESCRIPTION(_("Start Time"))
+
+	// WsQ: overlapping lines get an orange start time
+	void Paint(wxDC &dc, int x, int y, const AssDialogue *d, const agi::Context *c) const override {
+		if (!theme::IsDark() || !row_overlaps) return GridColumnTime::Paint(dc, x, y, d, c);
+		auto tc = dc.GetTextForeground();
+		dc.SetTextForeground(to_wx(OPT_GET("Colour/Subtitle Grid/Collision")->GetColor()));
+		GridColumnTime::Paint(dc, x, y, d, c);
+		dc.SetTextForeground(tc);
+	}
 
 	wxString Value(const AssDialogue *d, const agi::Context *c) const override {
 		if (by_frame)
@@ -350,6 +377,26 @@ public:
 
 		int cps_min = cps_warn->GetInt();
 		int cps_max = std::max<int>(cps_min, cps_error->GetInt());
+
+		// WsQ: a rounded badge in a monospace font in the dark layout
+		if (theme::IsDark()) {
+			wxFont old = dc.GetFont();
+			dc.SetFont(theme::MonoFont(old));
+			ext = dc.GetTextExtent(str);
+			if (cps > cps_min) {
+				double alpha = std::min((double)(cps - cps_min + 1) / (cps_max - cps_min + 1), 1.0);
+				dc.SetBrush(wxBrush(blend(to_wx(bg_color->GetColor()), dc.GetBrush().GetColour(), alpha)));
+				dc.SetPen(*wxTRANSPARENT_PEN);
+				int bw = std::max(ext.GetWidth() + 10, ext.GetHeight() + 4);
+				dc.DrawRoundedRectangle(x + (width - bw) / 2, y, bw, ext.GetHeight() + 4, 4);
+				dc.SetTextForeground(blend(wxColour(255, 180, 161), tc, alpha));
+			}
+			dc.DrawText(str, x + (width - ext.GetWidth()) / 2, y + 2);
+			dc.SetTextForeground(tc);
+			dc.SetFont(old);
+			return;
+		}
+
 		if (cps > cps_min) {
 			double alpha = std::min((double)(cps - cps_min + 1) / (cps_max - cps_min + 1), 1.0);
 			dc.SetBrush(wxBrush(blend(to_wx(bg_color->GetColor()), dc.GetBrush().GetColour(), alpha)));

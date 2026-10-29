@@ -35,6 +35,7 @@
 #include "subs_edit_box.h"
 
 #include "flat_button.h"
+#include "theme.h"
 
 #include "ass_dialogue.h"
 #include "ass_file.h"
@@ -105,7 +106,7 @@ const auto AssDialogue_Effect = &AssDialogue::Effect;
 }
 
 SubsEditBox::SubsEditBox(wxWindow *parent, agi::Context *context)
-: wxPanel(parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | wxRAISED_BORDER, "SubsEditBox")
+: wxPanel(parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | (theme::IsDark() ? wxBORDER_NONE : wxRAISED_BORDER), "SubsEditBox")
 , c(context)
 , undo_timer(GetEventHandler())
 {
@@ -144,7 +145,8 @@ SubsEditBox::SubsEditBox(wxWindow *parent, agi::Context *context)
 	Bind(wxEVT_COMBOBOX, &SubsEditBox::OnEffectChange, this, effect_box->GetId());
 	top_sizer->Add(effect_box, 3, wxALIGN_CENTER, 0);
 
-	char_count = new wxTextCtrl(this, -1, "0", wxDefaultPosition, wxDefaultSize, wxTE_READONLY | wxTE_CENTER);
+	const long field_border = theme::IsDark() ? wxBORDER_NONE : 0;
+	char_count = new wxTextCtrl(this, -1, "0", wxDefaultPosition, wxDefaultSize, wxTE_READONLY | wxTE_CENTER | field_border);
 	char_count->SetInitialSize(char_count->GetSizeFromText(wxS("000 | 000 | 000")));
 	char_count->SetToolTip(_("Number of characters in each line of this subtitle; red when a line is over the limit."));
 	top_sizer->Add(char_count, 0, wxALIGN_CENTER, 0);
@@ -194,16 +196,16 @@ SubsEditBox::SubsEditBox(wxWindow *parent, agi::Context *context)
 	middle_right_sizer->Add(split_box, wxSizerFlags().Center().Left());
 
 	// Main sizer
-	wxSizer *main_sizer = new wxBoxSizer(wxVERTICAL);
+	main_sizer = new wxBoxSizer(wxVERTICAL);
 	main_sizer->Add(top_sizer,0,wxEXPAND | wxALL,3);
 	main_sizer->Add(middle_left_sizer,0,wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM,3);
 	main_sizer->Add(middle_right_sizer,0,wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM,3);
 
 	// Text editor
-	edit_ctrl = new SubsTextEditCtrl(this, FromDIP(wxSize(300,50)), wxBORDER_SUNKEN, c);
+	edit_ctrl = new SubsTextEditCtrl(this, FromDIP(wxSize(300,50)), theme::IsDark() ? wxBORDER_NONE : wxBORDER_SUNKEN, c);
 	edit_ctrl->Bind(wxEVT_CHAR_HOOK, &SubsEditBox::OnKeyDown, this);
 
-	secondary_editor = new wxTextCtrl(this, -1, "", wxDefaultPosition, FromDIP(wxSize(300,50)), wxBORDER_SUNKEN | wxTE_MULTILINE | wxTE_READONLY);
+	secondary_editor = new wxTextCtrl(this, -1, "", wxDefaultPosition, FromDIP(wxSize(300,50)), (theme::IsDark() ? wxBORDER_NONE : wxBORDER_SUNKEN) | wxTE_MULTILINE | wxTE_READONLY);
 
 	main_sizer->Add(secondary_editor,1,wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM,3);
 	main_sizer->Add(edit_ctrl,1,wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM,3);
@@ -218,6 +220,34 @@ SubsEditBox::SubsEditBox(wxWindow *parent, agi::Context *context)
 	main_sizer->Hide(bottom_sizer);
 
 	SetSizerAndFit(main_sizer);
+
+	// WsQ Dark: a rounded card with rounded, flat fields like the mockup
+	if (theme::IsDark()) {
+		for (wxTextCtrl *field : {char_count, secondary_editor, margin[0], margin[1], margin[2]}) {
+			field->SetBackgroundColour(theme::Field());
+			theme::FrameField(field);
+		}
+		for (wxTextCtrl *field : {static_cast<wxTextCtrl*>(start_time), static_cast<wxTextCtrl*>(end_time), static_cast<wxTextCtrl*>(duration)})
+			field->SetBackgroundColour(theme::Field());
+		start_time->SetForegroundColour(wxColour(255, 179, 181));
+		end_time->SetForegroundColour(wxColour(181, 206, 255));
+		duration->SetForegroundColour(theme::Text());
+		for (wxTextCtrl *field : {static_cast<wxTextCtrl*>(start_time), static_cast<wxTextCtrl*>(end_time), static_cast<wxTextCtrl*>(duration)}) {
+			field->SetFont(theme::MonoFont(field->GetFont()));
+			field->SetInitialSize(field->GetSizeFromText(wxS(" 0:00:00.000 ")));
+		}
+		theme::FrameField(start_time, wxColour(90, 46, 49));
+		theme::FrameField(end_time, wxColour(43, 74, 120));
+		theme::FrameField(duration);
+		edit_ctrl->SetBackgroundColour(to_wx(OPT_GET("Colour/Subtitle/Background")->GetColor()));
+		theme::FrameField(edit_ctrl);
+		for (wxWindow *field : {static_cast<wxWindow*>(style_box), static_cast<wxWindow*>(actor_box), static_cast<wxWindow*>(effect_box), static_cast<wxWindow*>(layer)}) {
+			field->SetBackgroundColour(theme::Field());
+			field->SetForegroundColour(theme::Text());
+		}
+		theme::MakeCard(this, 5);
+		Fit();
+	}
 
 	edit_ctrl->Bind(wxEVT_STC_MODIFIED, &SubsEditBox::OnChange, this);
 	edit_ctrl->SetModEventMask(wxSTC_MOD_INSERTTEXT | wxSTC_MOD_DELETETEXT | wxSTC_STARTACTION);
@@ -256,7 +286,7 @@ SubsEditBox::~SubsEditBox() {
 }
 
 wxTextCtrl *SubsEditBox::MakeMarginCtrl(wxString const& tooltip, int margin, wxString const& commit_msg) {
-	wxTextCtrl *ctrl = new wxTextCtrl(this, -1, "", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE | wxTE_PROCESS_ENTER, IntValidator(0, true));
+	wxTextCtrl *ctrl = new wxTextCtrl(this, -1, "", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE | wxTE_PROCESS_ENTER | (theme::IsDark() ? wxBORDER_NONE : 0), IntValidator(0, true));
 	ctrl->SetInitialSize(ctrl->GetSizeFromText(wxS("0000")));
 	ctrl->SetMaxLength(5);
 	ctrl->SetToolTip(tooltip);
@@ -272,7 +302,7 @@ wxTextCtrl *SubsEditBox::MakeMarginCtrl(wxString const& tooltip, int margin, wxS
 }
 
 TimeEdit *SubsEditBox::MakeTimeCtrl(wxString const& tooltip, TimeField field) {
-	TimeEdit *ctrl = new TimeEdit(this, -1, c, "", wxDefaultSize, field == TIME_END);
+	TimeEdit *ctrl = new TimeEdit(this, -1, c, "", wxDefaultSize, field == TIME_END, theme::IsDark() ? wxBORDER_NONE : 0);
 	ctrl->SetInitialSize(ctrl->GetSizeFromText(wxS(" 0:00:00.000 ")));
 	ctrl->SetToolTip(tooltip);
 	Bind(wxEVT_TEXT, [=, this](wxCommandEvent&) { CommitTimes(field); }, ctrl->GetId());
@@ -545,7 +575,7 @@ void SubsEditBox::OnSize(wxSizeEvent &evt) {
 
 	if (button_bar_split) {
 		if (availableWidth > midMin + botMin) {
-			GetSizer()->Detach(middle_right_sizer);
+			main_sizer->Detach(middle_right_sizer);
 			middle_left_sizer->Add(middle_right_sizer,0,wxALIGN_CENTER_VERTICAL);
 			button_bar_split = false;
 		}
@@ -553,7 +583,7 @@ void SubsEditBox::OnSize(wxSizeEvent &evt) {
 	else {
 		if (availableWidth < midMin) {
 			middle_left_sizer->Detach(middle_right_sizer);
-			GetSizer()->Insert(2,middle_right_sizer,0,wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM,3);
+			main_sizer->Insert(2,middle_right_sizer,0,wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM,3);
 			button_bar_split = true;
 		}
 	}
@@ -595,8 +625,8 @@ void SubsEditBox::DoOnSplit(bool show_original) {
 	if (show_original)
 		secondary_editor->SetValue(to_wx(c->initialLineState->GetInitialText()));
 
-	GetSizer()->Show(secondary_editor, show_original);
-	GetSizer()->Show(bottom_sizer, show_original);
+	main_sizer->Show(secondary_editor, show_original);
+	main_sizer->Show(bottom_sizer, show_original);
 	Fit();
 	SetMinSize(GetSize());
 	wxSizer* parent_sizer = GetParent()->GetSizer();

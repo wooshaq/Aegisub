@@ -37,7 +37,9 @@
 #include "audio_karaoke.h"
 #include "audio_timing.h"
 #include "options.h"
+#include "flat_button.h"
 #include "project.h"
+#include "theme.h"
 #include "toggle_bitmap.h"
 #include "utils.h"
 
@@ -61,7 +63,7 @@ AudioBox::AudioBox(wxWindow *parent, agi::Context *context)
 , controller(context->audioController.get())
 , context(context)
 , audio_open_connection(context->audioController->AddAudioPlayerOpenListener(&AudioBox::OnAudioOpen, this))
-, panel(new wxPanel(this, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | wxBORDER_RAISED))
+, panel(new wxPanel(this, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | (theme::IsDark() ? wxBORDER_NONE : wxBORDER_RAISED)))
 , audioDisplay(new AudioDisplay(panel, context->audioController.get(), context))
 , HorizontalZoom(new wxSlider(panel, Audio_Horizontal_Zoom, -OPT_GET("Audio/Zoom/Horizontal")->GetInt(), -50, 30, wxDefaultPosition, wxDefaultSize, wxSL_VERTICAL|wxSL_BOTH))
 , VerticalZoom(new wxSlider(panel, Audio_Vertical_Zoom, OPT_GET("Audio/Zoom/Vertical")->GetInt(), 0, 100, wxDefaultPosition, wxDefaultSize, wxSL_VERTICAL|wxSL_BOTH|wxSL_INVERSE))
@@ -107,6 +109,14 @@ AudioBox::AudioBox(wxWindow *parent, agi::Context *context)
 	MainSizer->Add(context->karaoke,0,wxEXPAND|wxALL,3);
 	MainSizer->Show(context->karaoke, false);
 	panel->SetSizer(MainSizer);
+
+	// WsQ Dark: the audio display and its toolbar in one rounded card
+	if (theme::IsDark()) {
+		SetBackgroundColour(theme::Window());
+		for (wxWindow *slider : {static_cast<wxWindow*>(HorizontalZoom), static_cast<wxWindow*>(VerticalZoom), static_cast<wxWindow*>(VolumeBar)})
+			slider->SetBackgroundColour(theme::Bar());
+		theme::MakeCard(panel, 2);
+	}
 
 	wxSizer *audioSashSizer = new wxBoxSizer(wxHORIZONTAL);
 	audioSashSizer->Add(panel, 1, wxEXPAND);
@@ -210,7 +220,8 @@ void AudioBox::OnAudioOpen() {
 }
 
 void AudioBox::ShowKaraokeBar(bool show) {
-	wxSizer *panel_sizer = panel->GetSizer();
+	// The karaoke bar's own sizer: the panel's may be the card padding around it
+	wxSizer *panel_sizer = context->karaoke->GetContainingSizer();
 	if (panel_sizer->IsShown(context->karaoke) == show) return;
 
 	int new_height = GetSize().GetHeight();

@@ -147,6 +147,10 @@ FrameMain::FrameMain()
 
 	StartupLog("Create status bar");
 	CreateStatusBar(2);
+	if (theme::IsDark()) {
+		GetStatusBar()->SetBackgroundColour(wxColour(22, 24, 28));
+		GetStatusBar()->SetForegroundColour(theme::TextDim());
+	}
 
 	StartupLog("Set icon");
 #ifdef _WIN32
@@ -202,7 +206,7 @@ void FrameMain::InitContents() {
 	// WsQ: one background colour for all panels, matching the flat buttons
 	// (set before the children are created so the panels inherit it)
 	if (theme::IsDark())
-		Panel->SetBackgroundColour(FlatButton::PanelColour());
+		Panel->SetBackgroundColour(theme::Window());
 
 	StartupLog("Create subtitles grid");
 	context->subsGrid = new BaseGrid(Panel, context.get());
@@ -218,13 +222,14 @@ void FrameMain::InitContents() {
 
 	StartupLog("Arrange main sizers");
 	ToolsSizer = new wxBoxSizer(wxVERTICAL);
-	ToolsSizer->Add(audioBox, 0, wxEXPAND);
+	ToolsSizer->Add(audioBox, 0, wxEXPAND | (theme::IsDark() ? wxBOTTOM : 0), theme::IsDark() ? FromDIP(8) : 0);
 	ToolsSizer->Add(EditBox, 1, wxEXPAND);
 	TopSizer = new wxBoxSizer(wxHORIZONTAL);
 	TopSizer->Add(videoBox, 0, wxEXPAND, 0);
-	TopSizer->Add(ToolsSizer, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+	TopSizer->Add(ToolsSizer, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM | (theme::IsDark() ? wxTOP : 0), theme::IsDark() ? FromDIP(8) : 5);
 	MainSizer = new wxBoxSizer(wxVERTICAL);
-	MainSizer->Add(new wxStaticLine(Panel),0,wxEXPAND,0);
+	if (!theme::IsDark())
+		MainSizer->Add(new wxStaticLine(Panel),0,wxEXPAND,0);
 	MainSizer->Add(TopSizer,0,wxEXPAND,0);
 	MainSizer->Add(context->subsGrid,1,wxEXPAND,0);
 	Panel->SetSizer(MainSizer);

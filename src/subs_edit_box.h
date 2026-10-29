@@ -105,6 +105,8 @@ class SubsEditBox final : public wxPanel {
 	wxCheckBox *split_box;
 
 	wxSizer *top_sizer;
+	/// The edit box's own sizer (inside the card padding in the dark theme)
+	wxSizer *main_sizer = nullptr;
 	wxSizer *middle_right_sizer;
 	wxSizer *middle_left_sizer;
 	wxSizer *bottom_sizer;

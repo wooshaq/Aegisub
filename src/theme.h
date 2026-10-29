@@ -17,6 +17,9 @@
 
 #pragma once
 
+class wxColour;
+class wxFont;
+
 namespace theme {
 /// Apply the colour palette for the selected theme if it isn't yet, switch
 /// native controls to dark mode if wanted, and follow later changes to the
@@ -25,4 +28,18 @@ void Init();
 
 /// Is the dark theme selected?
 bool IsDark();
+
+/// Monospace font of the same size as base, for times and numbers
+wxFont MonoFont(wxFont const& base);
+
+/// WsQ Dark colours (the "Timing (SE)" layout). In the light theme these
+/// fall back to the system colours where that makes sense.
+wxColour Window();      ///< main window background
+wxColour Bar();         ///< toolbars, card bodies
+wxColour Border();      ///< card and panel borders
+wxColour Field();       ///< text field and button background
+wxColour FieldBorder(); ///< text field and button border
+wxColour Text();        ///< normal text
+wxColour TextDim();     ///< labels and secondary text
+wxColour Accent();      ///< blue accent
 }

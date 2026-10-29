@@ -135,26 +135,26 @@
 				"Normal" : {
 					"Hue Offset" : 150.0,
 					"Hue Scale" : 0.0,
-					"Saturation Offset" : 200.0,
-					"Saturation Scale" : 0.0,
-					"Lightness Offset" : 0.0,
-					"Lightness Scale" : 180.0
+					"Saturation Offset" : 30.0,
+					"Saturation Scale" : 140.0,
+					"Lightness Offset" : 18.0,
+					"Lightness Scale" : 122.0
 				},
 				"Inactive" : {
 					"Hue Offset" : 150.0,
 					"Hue Scale" : 0.0,
-					"Saturation Offset" : 120.0,
-					"Saturation Scale" : 0.0,
-					"Lightness Offset" : 0.0,
-					"Lightness Scale" : 110.0
+					"Saturation Offset" : 30.0,
+					"Saturation Scale" : 90.0,
+					"Lightness Offset" : 26.0,
+					"Lightness Scale" : 90.0
 				},
 				"Selection" : {
 					"Hue Offset" : 150.0,
 					"Hue Scale" : 0.0,
-					"Saturation Offset" : 200.0,
-					"Saturation Scale" : 0.0,
-					"Lightness Offset" : 12.0,
-					"Lightness Scale" : 180.0
+					"Saturation Offset" : 115.0,
+					"Saturation Scale" : 90.0,
+					"Lightness Offset" : 44.0,
+					"Lightness Scale" : 122.0
 				},
 				"Primary" : {
 					"Hue Offset" : 150.0,
@@ -165,13 +165,13 @@
 					"Lightness Scale" : 260.0
 				},
 				"UI" : {
-					"Light" : "rgb(76, 141, 255)",
-					"Dark" : "rgb(18, 20, 23)",
+					"Light" : "rgb(122, 130, 141)",
+					"Dark" : "rgb(24, 26, 30)",
 					"Selection" : "rgb(29, 53, 87)"
 				},
 				"UI Focused" : {
-					"Light" : "rgb(110, 168, 255)",
-					"Dark" : "rgb(18, 20, 23)",
+					"Light" : "rgb(155, 163, 174)",
+					"Dark" : "rgb(24, 26, 30)",
 					"Selection" : "rgb(29, 53, 87)"
 				}
 			},

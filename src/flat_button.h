@@ -18,12 +18,21 @@
 #pragma once
 
 #include <wx/bmpbndl.h>
+#include <wx/colour.h>
 #include <wx/control.h>
 
 /// Rounded icon button in the style of the GTK Adwaita theme. Sends
 /// wxEVT_BUTTON, or wxEVT_TOGGLEBUTTON when created as a toggle.
 class FlatButton final : public wxControl {
+public:
+	enum class Look {
+		Framed, ///< filled, with a border (edit box buttons)
+		Tile,   ///< bare icon, filled on hover (audio toolbar)
+	};
+
+private:
 	wxBitmapBundle bitmap;
+	Look look = Look::Framed;
 	wxString label;
 	bool toggle;
 	bool value = false;
@@ -46,6 +55,19 @@ public:
 	bool GetValue() const { return value; }
 	void SetValue(bool v);
 
+	void SetLook(Look l) { look = l; Refresh(false); }
+
 	/// Window background colour used by the themed panels
 	static wxColour PanelColour();
 };
+
+namespace theme {
+/// Draw a window as a rounded card (dark theme only): its background turns
+/// into the card colour, and its sizer is padded by inset on every side.
+/// Call after the window's sizer has been set.
+void MakeCard(wxWindow *card, int inset = 5);
+
+/// Give a borderless child control of a card a rounded field frame drawn by
+/// the card. Its sizer item gets enough border to fit the frame.
+void FrameField(wxWindow *field, wxColour const& border = wxNullColour);
+}

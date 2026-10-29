@@ -45,6 +45,7 @@
 #include "utils.h"
 #include "selection_controller.h"
 #include "subs_controller.h"
+#include "theme.h"
 #include "video_controller.h"
 
 #include <libaegisub/util.h>
@@ -191,7 +192,8 @@ void BaseGrid::UpdateStyle() {
 	dc.SetFont(font);
 
 	// Set line height
-	lineHeight = dc.GetCharHeight() + 4;
+	// WsQ: roomier rows in the dark layout
+	lineHeight = dc.GetCharHeight() + (theme::IsDark() ? FromDIP(12) : 4);
 
 	// Set row brushes
 	row_colors.Default.SetColour(to_wx(OPT_GET("Colour/Subtitle Grid/Background/Background")->GetColor()));
@@ -311,13 +313,20 @@ void BaseGrid::OnPaint(wxPaintEvent &) {
 	wxAutoBufferedPaintDC dc(this);
 	dc.SetFont(font);
 
+	// WsQ: the dark layout has no column lines, full-width row colours,
+	// alternating rows and vertically centred text
+	const bool dark = theme::IsDark();
+	const int pad = dark ? (lineHeight - dc.GetCharHeight()) / 2 - 2 : 0;
+	const wxBrush alt_row(wxColour(30, 33, 37));
+
 	dc.SetBackground(row_colors.Default);
 	dc.Clear();
 
 	// Draw labels
 	dc.SetPen(*wxTRANSPARENT_PEN);
 	dc.SetBrush(row_colors.LeftCol);
-	dc.DrawRectangle(0, lineHeight, columns[0]->Width(), h-lineHeight);
+	if (!dark)
+		dc.DrawRectangle(0, lineHeight, columns[0]->Width(), h-lineHeight);
 
 	// Row colors
 	wxColour text_standard(to_wx(OPT_GET("Colour/Subtitle Grid/Standard")->GetColor()));
@@ -327,7 +336,8 @@ void BaseGrid::OnPaint(wxPaintEvent &) {
 	// First grid row
 	wxPen grid_pen(to_wx(OPT_GET("Colour/Subtitle Grid/Lines")->GetColor()));
 	dc.SetPen(grid_pen);
-	dc.DrawLine(0, 0, w, 0);
+	if (!dark)
+		dc.DrawLine(0, 0, w, 0);
 	dc.SetPen(*wxTRANSPARENT_PEN);
 
 	auto paint_text = [&](wxString const& str, int x, int y, int col) {
@@ -337,12 +347,12 @@ void BaseGrid::OnPaint(wxPaintEvent &) {
 			left += (columns[col]->Width() - 6 - ext.GetWidth()) / 2;
 		}
 
-		dc.DrawText(str, left, y + 2);
+		dc.DrawText(str, left, y + 2 + pad);
 	};
 
 	// Paint header
 	{
-		dc.SetTextForeground(text_standard);
+		dc.SetTextForeground(dark ? theme::TextDim() : text_standard);
 		dc.SetBrush(row_colors.Header);
 		dc.DrawRectangle(0, 0, w, lineHeight);
 
@@ -360,7 +370,7 @@ void BaseGrid::OnPaint(wxPaintEvent &) {
 	// Paint the rows
 	const int drawPerScreen = h/lineHeight + 1;
 	const int nDraw = mid(0, drawPerScreen, GetRows() - yPos);
-	const int grid_x = columns[0]->Width();
+	const int grid_x = dark ? 0 : columns[0]->Width();
 
 	const auto active_line = context->selectionController->GetActiveLine();
 	auto const& selection = context->selectionController->GetSelectedSet();
@@ -377,6 +387,8 @@ void BaseGrid::OnPaint(wxPaintEvent &) {
 			color = row_colors.Selection;
 		else if (curDiag->Comment)
 			color = row_colors.Comment;
+		else if (dark && (i + yPos) % 2)
+			color = alt_row;
 
 		// WsQ: lines that look like ads (contain "www", ".com" or ".net") are highlighted red
 		auto const& line_text = curDiag->Text.get();
@@ -398,6 +410,7 @@ void BaseGrid::OnPaint(wxPaintEvent &) {
 
 		// WsQ: a stripe on the left of lines that overlap the previous or next
 		// line in the file (comments ignored)
+		GridColumn::row_overlaps = false;
 		if (!curDiag->Comment) {
 			const int row = i + yPos;
 			auto neighbour = [&](int dir) -> AssDialogue* {
@@ -408,6 +421,9 @@ void BaseGrid::OnPaint(wxPaintEvent &) {
 			};
 			AssDialogue *prev = neighbour(-1), *next = neighbour(1);
 			if ((prev && prev->End > curDiag->Start) || (next && curDiag->End > next->Start)) {
+				GridColumn::row_overlaps = true;
+			}
+			if (!dark && GridColumn::row_overlaps) {
 				dc.SetPen(*wxTRANSPARENT_PEN);
 				dc.SetBrush(wxBrush(text_collision));
 				dc.DrawRectangle(grid_x, (i + 1) * lineHeight + 1, 4, lineHeight);
@@ -415,7 +431,7 @@ void BaseGrid::OnPaint(wxPaintEvent &) {
 			}
 		}
 
-		if (active_line != curDiag && curDiag->CollidesWith(active_line))
+		if (!dark && active_line != curDiag && curDiag->CollidesWith(active_line))
 			dc.SetTextForeground(text_collision);
 		else if (inSel)
 			dc.SetTextForeground(text_selection);
@@ -426,8 +442,16 @@ void BaseGrid::OnPaint(wxPaintEvent &) {
 		int x = 0;
 		int y = (i + 1) * lineHeight;
 		for (size_t j : agi::util::range(columns.size())) {
-			if (paint_columns[j])
-				columns[j]->Paint(dc, x, y, curDiag, context);
+			if (paint_columns[j]) {
+				if (dark && j == 0 && !inSel) {
+					auto tc = dc.GetTextForeground();
+					dc.SetTextForeground(theme::TextDim());
+					columns[j]->Paint(dc, x, y + pad, curDiag, context);
+					dc.SetTextForeground(tc);
+				}
+				else
+					columns[j]->Paint(dc, x, y + pad, curDiag, context);
+			}
 			x += columns[j]->Width();
 		}
 
@@ -438,7 +462,7 @@ void BaseGrid::OnPaint(wxPaintEvent &) {
 	}
 
 	// Draw grid columns
-	{
+	if (!dark) {
 		int maxH = (nDraw + 1) * lineHeight;
 		int x = 0;
 		dc.SetPen(grid_pen);
@@ -451,7 +475,13 @@ void BaseGrid::OnPaint(wxPaintEvent &) {
 		dc.DrawLine(w, 0, w, maxH);
 	}
 
-	if (active_line && active_line->Row >= yPos && active_line->Row < yPos + nDraw) {
+	if (dark && active_line && active_line->Row >= yPos && active_line->Row < yPos + nDraw) {
+		// Accent bar on the left of the active line
+		dc.SetPen(*wxTRANSPARENT_PEN);
+		dc.SetBrush(wxBrush(to_wx(OPT_GET("Colour/Subtitle Grid/Active Border")->GetColor())));
+		dc.DrawRectangle(0, (active_line->Row - yPos + 1) * lineHeight + 1, FromDIP(3), lineHeight);
+	}
+	else if (active_line && active_line->Row >= yPos && active_line->Row < yPos + nDraw) {
 		dc.SetPen(wxPen(to_wx(OPT_GET("Colour/Subtitle Grid/Active Border")->GetColor())));
 		dc.SetBrush(*wxTRANSPARENT_BRUSH);
 		dc.DrawRectangle(0, (active_line->Row - yPos + 1) * lineHeight, w, lineHeight + 1);

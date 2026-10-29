@@ -42,6 +42,7 @@ class WidthHelper {
 
 public:
 	void SetDC(wxDC *dc) { this->dc = dc; }
+	wxDC *GetDC() const { return dc; }
 	void Age();
 	void ClearCache() { widths.clear(); };
 
@@ -76,6 +77,9 @@ public:
 
 	virtual void UpdateWidth(const agi::Context *c, WidthHelper &helper);
 	virtual void SetByFrame(bool /* by_frame */) { }
+
+	/// WsQ: set by the grid before painting a row: does it overlap a neighbour?
+	static inline bool row_overlaps = false;
 	void SetVisible(bool new_value) { visible = new_value; }
 };
 

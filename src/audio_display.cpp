@@ -40,6 +40,7 @@
 #include "include/aegisub/context.h"
 #include "include/aegisub/hotkey.h"
 #include "options.h"
+#include "theme.h"
 #include "project.h"
 #include "utils.h"
 #include "video_controller.h"
@@ -241,6 +242,25 @@ public:
 	{
 		colours.SetFocused(has_focus);
 
+		// WsQ Dark: a slim rounded thumb on a flat track, like the mockup
+		if (theme::IsDark()) {
+			dc.SetPen(*wxTRANSPARENT_PEN);
+			dc.SetBrush(wxBrush(colours.Dark()));
+			dc.DrawRectangle(bounds);
+			if (sel_length > 0 && sel_start >= 0) {
+				dc.SetBrush(wxBrush(colours.Selection()));
+				dc.DrawRectangle(wxRect(sel_start, bounds.y, sel_length, bounds.height));
+			}
+			if (load_progress > 0 && load_progress < data_length) {
+				dc.SetBrush(wxBrush(theme::Accent()));
+				dc.DrawRectangle(wxRect(bounds.x, bounds.y + bounds.height - 2,
+					(int64_t)bounds.width * load_progress / data_length, 2));
+			}
+			dc.SetBrush(wxBrush(has_focus ? wxColour(74, 81, 91) : wxColour(58, 64, 72)));
+			dc.DrawRoundedRectangle(thumb.Deflate(0, 2), 3);
+			return;
+		}
+
 		dc.SetPen(wxPen(colours.Light()));
 		dc.SetBrush(wxBrush(colours.Dark()));
 		dc.DrawRectangle(bounds);
@@ -416,6 +436,13 @@ public:
 		// Prepare for writing text
 		dc.SetTextBackground(colours.Dark());
 		dc.SetTextForeground(colours.Light());
+		// WsQ Dark: monospace labels, like the mockup
+		wxDCFontChanger font_changer(dc);
+		if (theme::IsDark()) {
+			wxFont label_font = theme::MonoFont(dc.GetFont());
+			label_font.SetPointSize(std::max(6, label_font.GetPointSize() - 1));
+			font_changer.Set(label_font);
+		}
 
 		// Figure out the first scale mark to show
 		int ms_left = int(pixel_left * ms_per_pixel);
@@ -470,9 +497,9 @@ public:
 
 				int tw, th;
 				dc.GetTextExtent(time_string, &tw, &th);
-				last_text_right = next_scale_mark_pos + tw;
+				last_text_right = next_scale_mark_pos + tw + (theme::IsDark() ? 8 : 0);
 
-				dc.DrawText(time_string, next_scale_mark_pos, 0);
+				dc.DrawText(time_string, next_scale_mark_pos + (theme::IsDark() ? 3 : 0), bounds.y + (theme::IsDark() ? 2 : 0));
 			}
 
 			next_scale_mark += 1;
@@ -598,7 +625,7 @@ public:
 };
 
 AudioDisplay::AudioDisplay(wxWindow *parent, AudioController *controller, agi::Context *context)
-: wxWindow(parent, -1, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS|wxBORDER_SIMPLE)
+: wxWindow(parent, -1, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS | (theme::IsDark() ? wxBORDER_NONE : wxBORDER_SIMPLE))
 , audio_open_connection(context->project->AddAudioProviderListener(&AudioDisplay::OnAudioOpen, this))
 , context(context)
 , audio_renderer(std::make_unique<AudioRenderer>())
@@ -1126,7 +1153,7 @@ void AudioDisplay::PaintLineInfo(wxDC &dc, TimeRange updtime, wxRect const& updr
 			wxString info = wxString::Format(wxS("#%d \u00b7 %.2fs"), line.row, line.range.length() / 1000.0);
 			if (line.cps >= 0)
 				info += wxString::Format(wxS(" \u00b7 %d cps"), line.cps);
-			wxFont info_font = font;
+			wxFont info_font = theme::IsDark() ? theme::MonoFont(font) : font;
 			info_font.SetPointSize(std::max(6, font.GetPointSize() - 1));
 			dc.SetFont(info_font);
 			dc.SetTextForeground(line.cps > cps_warn ? warn_colour : info_colour);

@@ -38,6 +38,7 @@
 #include "options.h"
 #include "project.h"
 #include "selection_controller.h"
+#include "theme.h"
 #include "video_controller.h"
 #include "video_display.h"
 #include "video_slider.h"
@@ -91,7 +92,16 @@ VideoBox::VideoBox(wxWindow *parent, bool isDetached, agi::Context *context)
 
 	auto VideoSizer = new wxBoxSizer(wxVERTICAL);
 	VideoSizer->Add(topSizer, 1, wxEXPAND, 0);
-	VideoSizer->Add(new wxStaticLine(this), 0, wxEXPAND, 0);
+	if (!theme::IsDark())
+		VideoSizer->Add(new wxStaticLine(this), 0, wxEXPAND, 0);
+	else {
+		// WsQ Dark: monospace time readouts on the dark field colour
+		for (wxTextCtrl *ctrl : {VideoPosition, VideoSubsPos}) {
+			ctrl->SetBackgroundColour(theme::Field());
+			ctrl->SetForegroundColour(wxColour(201, 206, 214));
+			ctrl->SetFont(theme::MonoFont(ctrl->GetFont()));
+		}
+	}
 	VideoSizer->Add(videoSlider, 0, wxEXPAND, 0);
 	VideoSizer->Add(videoBottomSizer, 0, wxEXPAND | wxBOTTOM, 5);
 	SetSizer(VideoSizer);

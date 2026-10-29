@@ -21,6 +21,7 @@
 #include "command/command.h"
 #include "compat.h"
 #include "flat_button.h"
+#include "theme.h"
 #include "include/aegisub/hotkey.h"
 #include "libresrc/libresrc.h"
 #include "options.h"
@@ -180,6 +181,7 @@ namespace {
 		, icon_size_slot(OPT_SUB("App/Toolbar Icon Size", &Toolbar::OnIconSizeChange, this))
 		, hotkeys_changed_slot(hotkey::inst->AddHotkeyChangeListener(&Toolbar::RegenerateToolbar, this))
 		{
+			if (theme::IsDark()) SetBackgroundColour(theme::Window());
 			Populate();
 			Bind(wxEVT_TOOL, &Toolbar::OnClick, this);
 			Bind(wxEVT_DPI_CHANGED, [this] (wxDPIChangedEvent &e) { RegenerateToolbar(); e.Skip(); });
@@ -198,6 +200,7 @@ namespace {
 #endif
 		, hotkeys_changed_slot(hotkey::inst->AddHotkeyChangeListener(&Toolbar::RegenerateToolbar, this))
 		{
+			if (theme::IsDark()) SetBackgroundColour(theme::Bar());
 			parent->SetToolBar(this);
 			Populate();
 			Bind(wxEVT_TOOL, &Toolbar::OnClick, this);
@@ -261,9 +264,19 @@ namespace {
 			auto sizer = new wxBoxSizer(wxHORIZONTAL);
 			bool gap_pending = false;
 
+			const bool dark = theme::IsDark();
+			if (dark) SetBackgroundColour(theme::Bar());
 			auto add = [&](wxWindow *w) {
-				if (!sizer->IsEmpty())
-					sizer->AddSpacer(FromDIP(gap_pending ? 10 : 2));
+				if (!sizer->IsEmpty()) {
+					if (dark && gap_pending) {
+						// WsQ Dark: a thin divider between groups, like the mockup
+						auto line = new wxPanel(this, -1, wxDefaultPosition, FromDIP(wxSize(1, 18)));
+						line->SetBackgroundColour(wxColour(54, 59, 66));
+						sizer->Add(line, wxSizerFlags().Center().Border(wxLEFT | wxRIGHT, FromDIP(5)));
+					}
+					else
+						sizer->AddSpacer(FromDIP(gap_pending ? 10 : dark ? 4 : 2));
+				}
 				gap_pending = false;
 				sizer->Add(w, wxSizerFlags().Center());
 			};
@@ -279,6 +292,10 @@ namespace {
 						wxSize(FromDIP(56), button_size.GetHeight()), wxSP_ARROW_KEYS | wxALIGN_RIGHT, 1, 999,
 						std::max<int>(1, OPT_GET("Tool/WsQ/Shift Frames")->GetInt()));
 					spin->SetToolTip(_("Frames to shift by with the arrow buttons"));
+					if (dark) {
+						spin->SetBackgroundColour(theme::Field());
+						spin->SetForegroundColour(theme::Text());
+					}
 					auto store = [spin](wxCommandEvent&) { OPT_SET("Tool/WsQ/Shift Frames")->SetInt(spin->GetValue()); };
 					spin->Bind(wxEVT_SPINCTRL, store);
 					spin->Bind(wxEVT_TEXT, store);
@@ -300,6 +317,7 @@ namespace {
 					command->Type() & (cmd::COMMAND_TOGGLE | cmd::COMMAND_RADIO));
 				if (command->Type() & (cmd::COMMAND_TOGGLE | cmd::COMMAND_RADIO))
 					toggle = button;
+				button->SetLook(FlatButton::Look::Tile);
 				// At least as large as the edit box buttons; larger only if the
 				// platform's button padding needs it, so the icon is never clipped
 				wxSize size = button->GetBestSize();
