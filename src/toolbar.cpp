@@ -21,6 +21,7 @@
 #include "command/command.h"
 #include "compat.h"
 #include "flat_button.h"
+#include "flat_controls.h"
 #include "theme.h"
 #include "include/aegisub/hotkey.h"
 #include "libresrc/libresrc.h"
@@ -288,16 +289,10 @@ namespace {
 				}
 
 				if (command_name == "wsq/shift_frames") {
-					auto spin = new wxSpinCtrl(this, -1, wxEmptyString, wxDefaultPosition,
-						wxSize(FromDIP(56), button_size.GetHeight()), wxSP_ARROW_KEYS | wxALIGN_RIGHT, 1, 999,
-						std::max<int>(1, OPT_GET("Tool/WsQ/Shift Frames")->GetInt()));
+					auto spin = new FlatSpinCtrl(this, std::max<int>(1, OPT_GET("Tool/WsQ/Shift Frames")->GetInt()), 1, 999,
+						wxSize(FromDIP(78), button_size.GetHeight()));
 					spin->SetToolTip(_("Frames to shift by with the arrow buttons"));
-					if (dark) {
-						spin->SetBackgroundColour(theme::Field());
-						spin->SetForegroundColour(theme::Text());
-					}
 					auto store = [spin](wxCommandEvent&) { OPT_SET("Tool/WsQ/Shift Frames")->SetInt(spin->GetValue()); };
-					spin->Bind(wxEVT_SPINCTRL, store);
 					spin->Bind(wxEVT_TEXT, store);
 					add(spin);
 					continue;

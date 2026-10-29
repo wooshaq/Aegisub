@@ -90,6 +90,7 @@ aegisub_src = files(
     'fft.cpp',
     'font_file_lister.cpp',
     'flat_button.cpp',
+    'flat_controls.cpp',
     'frame_main.cpp',
     'gl_text.cpp',
     'gl_wrap.cpp',

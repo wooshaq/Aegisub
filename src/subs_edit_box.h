@@ -54,7 +54,8 @@ class wxButton;
 class wxCheckBox;
 class wxRadioButton;
 class wxSizer;
-class wxSpinCtrl;
+class FlatComboBox;
+class FlatSpinCtrl;
 class wxStyledTextCtrl;
 class wxStyledTextEvent;
 class wxTextCtrl;
@@ -90,15 +91,15 @@ class SubsEditBox final : public wxPanel {
 
 	// Box controls
 	wxCheckBox *comment_box;
-	wxComboBox *style_box;
+	FlatComboBox *style_box;
 	wxWindow *style_edit_button;
-	Placeholder<wxComboBox> *actor_box;
+	FlatComboBox *actor_box;
 	TimeEdit *start_time;
 	TimeEdit *end_time;
 	TimeEdit *duration;
-	wxSpinCtrl *layer;
+	FlatSpinCtrl *layer;
 	std::array<wxTextCtrl *, 3> margin;
-	Placeholder<wxComboBox> *effect_box;
+	FlatComboBox *effect_box;
 	wxRadioButton *by_time;
 	wxRadioButton *by_frame;
 	wxTextCtrl *char_count;
@@ -142,7 +143,7 @@ class SubsEditBox final : public wxPanel {
 	TimeEdit *MakeTimeCtrl(wxString const& tooltip, TimeField field);
 	void MakeButton(const char *cmd_name);
 	wxWindow *MakeBottomButton(const char *cmd_name);
-	wxComboBox *MakeComboBox(wxString const& initial_text, int style, void (SubsEditBox::*handler)(wxCommandEvent&), wxString const& tooltip);
+	FlatComboBox *MakeComboBox(wxString const& initial_text, int style, void (SubsEditBox::*handler)(wxCommandEvent&), wxString const& tooltip);
 	wxRadioButton *MakeRadio(wxString const& text, bool start, wxString const& tooltip);
 
 	void OnChange(wxStyledTextEvent &event);
@@ -191,7 +192,7 @@ class SubsEditBox final : public wxPanel {
 	void UpdateFields(int type, bool repopulate_lists);
 
 	/// Regenerate a dropdown list with the unique values of a dialogue field
-	void PopulateList(wxComboBox *combo, boost::flyweight<std::string> AssDialogue::*field);
+	void PopulateList(FlatComboBox *combo, boost::flyweight<std::string> AssDialogue::*field);
 
 	/// @brief Enable or disable frame timing mode
 	void UpdateFrameTiming(agi::vfr::Framerate const& fps);

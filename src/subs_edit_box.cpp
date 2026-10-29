@@ -35,6 +35,7 @@
 #include "subs_edit_box.h"
 
 #include "flat_button.h"
+#include "flat_controls.h"
 #include "theme.h"
 
 #include "ass_dialogue.h"
@@ -81,12 +82,8 @@ void change_value(wxTextCtrl *ctrl, wxString const& value) {
 		ctrl->ChangeValue(value);
 }
 
-wxString new_value([[maybe_unused]] wxComboBox *ctrl, [[maybe_unused]] wxCommandEvent &evt) {
-#ifdef __WXGTK__
+wxString new_value(FlatComboBox *ctrl, wxCommandEvent &) {
 	return ctrl->GetValue();
-#else
-	return evt.GetString();
-#endif
 }
 
 void time_edit_char_hook(wxKeyEvent &event) {
@@ -135,12 +132,15 @@ SubsEditBox::SubsEditBox(wxWindow *parent, agi::Context *context)
 	});
 	top_sizer->Add(style_edit_button, wxSizerFlags().Center().Border(wxRIGHT));
 
-	actor_box = new Placeholder<wxComboBox>(this, _("Actor"), wxSize(110, -1), wxCB_DROPDOWN | wxTE_PROCESS_ENTER, _("Actor name for this speech. This is only for reference, and is mainly useless."));
+	// WsQ: combo boxes, number fields and sliders drawn by Aegisub itself
+	actor_box = new FlatComboBox(this, "", wxSize(110, -1), true, _("Actor"));
+	actor_box->SetToolTip(_("Actor name for this speech. This is only for reference, and is mainly useless."));
 	Bind(wxEVT_TEXT, &SubsEditBox::OnActorChange, this, actor_box->GetId());
 	Bind(wxEVT_COMBOBOX, &SubsEditBox::OnActorChange, this, actor_box->GetId());
 	top_sizer->Add(actor_box, wxSizerFlags(2).Center().Border(wxRIGHT));
 
-	effect_box = new Placeholder<wxComboBox>(this, _("Effect"), wxSize(80,-1), wxCB_DROPDOWN | wxTE_PROCESS_ENTER, _("Effect for this line. This can be used to store extra information for karaoke scripts, or for the effects supported by the renderer."));
+	effect_box = new FlatComboBox(this, "", wxSize(80, -1), true, _("Effect"));
+	effect_box->SetToolTip(_("Effect for this line. This can be used to store extra information for karaoke scripts, or for the effects supported by the renderer."));
 	Bind(wxEVT_TEXT, &SubsEditBox::OnEffectChange, this, effect_box->GetId());
 	Bind(wxEVT_COMBOBOX, &SubsEditBox::OnEffectChange, this, effect_box->GetId());
 	top_sizer->Add(effect_box, 3, wxALIGN_CENTER, 0);
@@ -154,7 +154,7 @@ SubsEditBox::SubsEditBox(wxWindow *parent, agi::Context *context)
 	// Middle controls
 	middle_left_sizer = new wxBoxSizer(wxHORIZONTAL);
 
-	layer = new wxSpinCtrl(this,-1,"",wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS | wxTE_PROCESS_ENTER,0,999,0);
+	layer = new FlatSpinCtrl(this, 0, 0, 999);
 	layer->SetToolTip(_("Layer number"));
 	middle_left_sizer->Add(layer, wxSizerFlags().Center());
 	middle_left_sizer->AddSpacer(5);
@@ -241,10 +241,6 @@ SubsEditBox::SubsEditBox(wxWindow *parent, agi::Context *context)
 		theme::FrameField(duration);
 		edit_ctrl->SetBackgroundColour(to_wx(OPT_GET("Colour/Subtitle/Background")->GetColor()));
 		theme::FrameField(edit_ctrl);
-		for (wxWindow *field : {static_cast<wxWindow*>(style_box), static_cast<wxWindow*>(actor_box), static_cast<wxWindow*>(effect_box), static_cast<wxWindow*>(layer)}) {
-			field->SetBackgroundColour(theme::Field());
-			field->SetForegroundColour(theme::Text());
-		}
 		theme::MakeCard(this, 5);
 		Fit();
 	}
@@ -253,7 +249,6 @@ SubsEditBox::SubsEditBox(wxWindow *parent, agi::Context *context)
 	edit_ctrl->SetModEventMask(wxSTC_MOD_INSERTTEXT | wxSTC_MOD_DELETETEXT | wxSTC_STARTACTION);
 
 	Bind(wxEVT_TEXT, &SubsEditBox::OnLayerEnter, this, layer->GetId());
-	Bind(wxEVT_SPINCTRL, &SubsEditBox::OnLayerEnter, this, layer->GetId());
 	Bind(wxEVT_CHECKBOX, &SubsEditBox::OnCommentChange, this, comment_box->GetId());
 
 	Bind(wxEVT_CHAR_HOOK, &SubsEditBox::OnKeyDown, this);
@@ -330,9 +325,9 @@ wxWindow *SubsEditBox::MakeBottomButton(const char *cmd_name) {
 	return btn;
 }
 
-wxComboBox *SubsEditBox::MakeComboBox(wxString const& initial_text, int style, void (SubsEditBox::*handler)(wxCommandEvent&), wxString const& tooltip) {
-	wxString styles[] = { "Default" };
-	wxComboBox *ctrl = new wxComboBox(this, -1, initial_text, wxDefaultPosition, wxSize(110,-1), 1, styles, style | wxTE_PROCESS_ENTER);
+FlatComboBox *SubsEditBox::MakeComboBox(wxString const& initial_text, int style, void (SubsEditBox::*handler)(wxCommandEvent&), wxString const& tooltip) {
+	auto ctrl = new FlatComboBox(this, initial_text, wxSize(110, -1), !(style & wxCB_READONLY));
+	ctrl->Set(wxArrayString(1, &initial_text));
 	ctrl->SetToolTip(tooltip);
 	top_sizer->Add(ctrl, wxSizerFlags(2).Center().Border(wxRIGHT));
 	Bind(wxEVT_COMBOBOX, handler, this, ctrl->GetId());
@@ -408,7 +403,7 @@ void SubsEditBox::UpdateFields(int type, bool repopulate_lists) {
 	}
 }
 
-void SubsEditBox::PopulateList(wxComboBox *combo, boost::flyweight<std::string> AssDialogue::*field) {
+void SubsEditBox::PopulateList(FlatComboBox *combo, boost::flyweight<std::string> AssDialogue::*field) {
 	wxEventBlocker blocker(this);
 
 	std::unordered_set<boost::flyweight<std::string>> values;

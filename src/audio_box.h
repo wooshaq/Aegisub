@@ -47,7 +47,7 @@ class wxCommandEvent;
 class wxPanel;
 class wxScrollEvent;
 class wxSizer;
-class wxSlider;
+class FlatSlider;
 
 /// @class AudioBox
 /// @brief Panel with audio playback and timing controls, also containing an AudioDisplay
@@ -67,9 +67,9 @@ class AudioBox final : public wxSashWindow, private agi::signal::ConnectionScope
 	/// The audio display in the box
 	AudioDisplay *audioDisplay;
 
-	wxSlider *HorizontalZoom;
-	wxSlider *VerticalZoom;
-	wxSlider *VolumeBar;
+	FlatSlider *HorizontalZoom;
+	FlatSlider *VerticalZoom;
+	FlatSlider *VolumeBar;
 
 	// Mouse wheel zoom accumulator
 	int mouse_zoom_accum = 0;

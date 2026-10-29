@@ -38,6 +38,7 @@
 #include "audio_timing.h"
 #include "options.h"
 #include "flat_button.h"
+#include "flat_controls.h"
 #include "project.h"
 #include "theme.h"
 #include "toggle_bitmap.h"
@@ -65,9 +66,9 @@ AudioBox::AudioBox(wxWindow *parent, agi::Context *context)
 , audio_open_connection(context->audioController->AddAudioPlayerOpenListener(&AudioBox::OnAudioOpen, this))
 , panel(new wxPanel(this, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | (theme::IsDark() ? wxBORDER_NONE : wxBORDER_RAISED)))
 , audioDisplay(new AudioDisplay(panel, context->audioController.get(), context))
-, HorizontalZoom(new wxSlider(panel, Audio_Horizontal_Zoom, -OPT_GET("Audio/Zoom/Horizontal")->GetInt(), -50, 30, wxDefaultPosition, wxDefaultSize, wxSL_VERTICAL|wxSL_BOTH))
-, VerticalZoom(new wxSlider(panel, Audio_Vertical_Zoom, OPT_GET("Audio/Zoom/Vertical")->GetInt(), 0, 100, wxDefaultPosition, wxDefaultSize, wxSL_VERTICAL|wxSL_BOTH|wxSL_INVERSE))
-, VolumeBar(new wxSlider(panel, Audio_Volume, OPT_GET("Audio/Volume")->GetInt(), 0, 100, wxDefaultPosition, wxDefaultSize, wxSL_VERTICAL|wxSL_BOTH|wxSL_INVERSE))
+, HorizontalZoom(new FlatSlider(panel, Audio_Horizontal_Zoom, -OPT_GET("Audio/Zoom/Horizontal")->GetInt(), -50, 30, false))
+, VerticalZoom(new FlatSlider(panel, Audio_Vertical_Zoom, OPT_GET("Audio/Zoom/Vertical")->GetInt(), 0, 100, true))
+, VolumeBar(new FlatSlider(panel, Audio_Volume, OPT_GET("Audio/Volume")->GetInt(), 0, 100, true))
 {
 	SetSashVisible(wxSASH_BOTTOM, true);
 	Bind(wxEVT_SASH_DRAGGED, &AudioBox::OnSashDrag, this);
@@ -113,8 +114,6 @@ AudioBox::AudioBox(wxWindow *parent, agi::Context *context)
 	// WsQ Dark: the audio display and its toolbar in one rounded card
 	if (theme::IsDark()) {
 		SetBackgroundColour(theme::Window());
-		for (wxWindow *slider : {static_cast<wxWindow*>(HorizontalZoom), static_cast<wxWindow*>(VerticalZoom), static_cast<wxWindow*>(VolumeBar)})
-			slider->SetBackgroundColour(theme::Bar());
 		theme::MakeCard(panel, 2);
 	}
 
