@@ -27,7 +27,7 @@
 
 class DialogProgressSink;
 class wxButton;
-class wxGauge;
+class WaveProgress;
 class wxStaticText;
 class wxTextCtrl;
 
@@ -39,7 +39,7 @@ class DialogProgress final : public wxDialog, public agi::BackgroundRunner {
 
 	wxStaticText *title;
 	wxStaticText *text;
-	wxGauge *gauge;
+	WaveProgress *gauge;
 	wxButton *cancel_button;
 	wxTextCtrl *log_output;
 
