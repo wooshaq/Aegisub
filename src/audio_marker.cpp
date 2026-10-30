@@ -173,10 +173,8 @@ void VideoPositionMarkerProvider::GetMarkers(const TimeRange &timerange, AudioMa
 	if (!c->project->VideoProvider())
 		return;
 
-	for (auto range : {range1.get(), range2.get()})
-		if (range && timerange.overlaps({range->GetPosition(), range->GetPosition() + range->GetWidth() - 1}))
-			out.push_back(range);
-
+	// WsQ: no white bands for the previous/current frame; the play cursor
+	// line alone shows the video position
 	if (marker && timerange.contains(marker->GetPosition()))
 		out.push_back(marker.get());
 

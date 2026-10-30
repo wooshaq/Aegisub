@@ -2,7 +2,7 @@
     "audio" : [
         "time/prev",
         "time/next",
-        "audio/play/selection",
+        "audio/wsq/play",
         "audio/play/line",
         "audio/stop",
         "",

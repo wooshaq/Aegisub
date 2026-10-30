@@ -229,6 +229,28 @@ struct audio_play_selection final : public validate_audio_open {
 	}
 };
 
+// WsQ: the play button of the audio toolbar, like a media player: play from
+// the current video position (or the line start without video) and keep
+// playing, press again to stop
+struct audio_wsq_play final : public validate_audio_open {
+	CMD_NAME("audio/wsq/play")
+	CMD_ICON(button_playsel)
+	STR_MENU("Play")
+	STR_DISP("Play")
+	STR_HELP("Play from the current position until stopped; press again to stop")
+
+	void operator()(agi::Context *c) override {
+		if (c->audioController->IsPlaying() || c->videoController->IsPlaying()) {
+			c->videoController->Stop();
+			c->audioController->Stop();
+		}
+		else if (c->project->VideoProvider())
+			c->videoController->Play();
+		else
+			c->audioController->PlayToEnd(c->audioController->GetPrimaryPlaybackRange().begin());
+	}
+};
+
 struct audio_play_toggle final : public validate_audio_open {
 	CMD_NAME("audio/play/toggle")
 	STR_MENU("Play audio selection or stop")
@@ -583,6 +605,7 @@ namespace cmd {
 		reg(std::make_unique<audio_play_selection>());
 		reg(std::make_unique<audio_play_to_end>());
 		reg(std::make_unique<audio_play_toggle>());
+		reg(std::make_unique<audio_wsq_play>());
 		reg(std::make_unique<audio_save_clip>());
 		reg(std::make_unique<audio_scroll_left>());
 		reg(std::make_unique<audio_scroll_right>());

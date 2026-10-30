@@ -2685,7 +2685,7 @@ msgstr ""
 
 #: ../src/command/video.cpp:633 ../src/command/video.cpp:634
 msgid "Play"
-msgstr ""
+msgstr "Odtwarzaj"
 
 #: ../src/command/video.cpp:635
 #, fuzzy
@@ -7345,3 +7345,7 @@ msgstr "Motyw"
 #: WsQ
 msgid "new line"
 msgstr "nowa linia"
+
+#: WsQ
+msgid "Play from the current position until stopped; press again to stop"
+msgstr "Odtwarzaj od bieżącej pozycji aż do zatrzymania; naciśnij ponownie, aby zatrzymać"
