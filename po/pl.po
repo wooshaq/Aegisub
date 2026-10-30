@@ -3780,11 +3780,11 @@ msgstr ""
 
 #: ../src/dialog_progress.cpp:193
 msgid "Cancel"
-msgstr ""
+msgstr "Anuluj"
 
 #: ../src/dialog_progress.cpp:241
 msgid "Cancelling..."
-msgstr ""
+msgstr "Anulowanie..."
 
 #: ../src/dialog_properties.cpp:91
 msgid "Script Properties"
